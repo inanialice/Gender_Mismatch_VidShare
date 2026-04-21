@@ -78,7 +78,7 @@ video {
 
 /* Same rule as `.comment>.image>a.avatar>img` — inset illustration, thick colored ring */
 .video-meta-photo-shell>a.avatar>img {
-    width: 65% !important;
+    width: 88% !important;
 }
 
 .ui.fluid.card .content .video-meta-profile .video-meta-avatar.video-meta-photo-shell,
@@ -95,7 +95,7 @@ video {
 }
 
 .ui.fluid.card .content .video-meta-profile .video-meta-photo-shell>a.avatar>img {
-    width: 65% !important;
+    width: 88% !important;
     height: auto !important;
     min-width: 0 !important;
     object-fit: contain !important;
@@ -107,7 +107,7 @@ video {
     align-items: center;
     justify-content: center;
     width: 100%;
-    font-size: 0.8rem;
+    font-size: 1.08rem;
     font-weight: 700;
     line-height: 1;
     letter-spacing: 0.03em;
@@ -130,7 +130,7 @@ video {
     justify-content: center;
     width: 100%;
     font-weight: 600;
-    font-size: 0.75em;
+    font-size: 1.02em;
     line-height: 1;
     letter-spacing: 0.02em;
     color: #fff;
@@ -348,7 +348,7 @@ video {
 }
 
 .comment>.image>a.avatar>img {
-    width: 65% !important;
+    width: 88% !important;
 }
 
 .comment>.image~.content {

@@ -33,11 +33,16 @@ const userController = require('./controllers/user');
  * API keys and Passport configuration.
  */
 const passportConfig = require('./config/passport');
+const viewHelpers = require('./controllers/helpers');
 
 /**
  * Create Express server.
  */
 const app = express();
+
+app.locals.actorPictureIsInitials = viewHelpers.actorPictureIsInitials;
+app.locals.actorInitialsFromPicture = viewHelpers.actorInitialsFromPicture;
+app.locals.actorPeopleProfileImgSrc = viewHelpers.actorPeopleProfileImgSrc;
 
 /**
  * Connect to MongoDB.
@@ -103,6 +108,7 @@ app.use('/semantic', express.static(path.join(__dirname, 'semantic'), { maxAge: 
 app.use(express.static(path.join(__dirname, 'uploads'), { maxAge: 31557600000 }));
 app.use('/post_pictures', express.static(path.join(__dirname, 'post_pictures'), { maxAge: 31557600000 }));
 app.use('/profile_pictures', express.static(path.join(__dirname, 'profile_pictures'), { maxAge: 31557600000 }));
+app.use('/people_profiles', express.static(path.join(__dirname, 'people_profiles'), { maxAge: 31557600000 }));
 
 /**
  * Primary app routes.
@@ -126,7 +132,9 @@ app.get('/logout', userController.logout);
 
 app.get('/', passportConfig.isAuthenticated, scriptController.getScript);
 app.post('/feed', passportConfig.isAuthenticated, scriptController.postUpdateFeedAction);
-app.get('/tutorial', passportConfig.isAuthenticated, scriptController.getScriptTutorial);
+app.get('/tutorial', passportConfig.isAuthenticated, function(req, res) {
+    res.redirect('/');
+});
 app.get('/trans', passportConfig.isAuthenticated, function(req, res) {
     res.render('trans', {
         title: 'Instructions'

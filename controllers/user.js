@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { validateSignupUsername } = require('./helpers');
 
 // From https://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
 function shuffle(array) {
@@ -186,18 +187,26 @@ exports.postSignup = async(req, res, next) => {
     subcommentTimes.push(firstVideo_subcommentTime);
 
     try {
+        const usernameCheck = await validateSignupUsername(req.body.username, req.query.r_id);
+        if (!usernameCheck.ok) {
+            res.set('Content-Type', 'application/json; charset=UTF-8');
+            return res.status(400).json({ result: 'error', message: usernameCheck.message });
+        }
+        const username = usernameCheck.normalized;
+
         const existingUser = await User.findOne({ mturkID: req.query.r_id }).exec();
+        let user;
         if (existingUser) {
-            existingUser.username = req.body.username;
+            existingUser.username = username;
             existingUser.profile.picture = req.body.photo;
-            existingUser.profile.name = req.body.username;
+            existingUser.profile.name = username;
             user = existingUser;
         } else {
             user = new User({
                 mturkID: req.query.r_id,
-                username: req.body.username,
+                username: username,
                 profile: {
-                    name: req.body.username,
+                    name: username,
                     color: '#a6a488',
                     picture: req.body.photo
                 },

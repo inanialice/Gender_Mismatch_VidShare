@@ -183,9 +183,9 @@ async function doPopulate() {
             console.log(color_start, "Starting to populate post replies...");
             return new Promise((resolve, reject) => {
                 async.eachSeries(comment_list, async function(new_reply, callback) {
-                        const act = await Actor.findOne({ username: new_reply.actor }).exec();
+                        const act = await resolveReplyActor(new_reply.actor);
                         if (act) {
-                            const pr = await Script.findOne({ postID: new_reply.reply }).exec();
+                            const pr = await Script.findOne({ postID: Number(new_reply.reply) }).exec();
                             if (pr) {
                                 let comment_detail = {
                                     commentID: new_reply.id,
@@ -221,9 +221,9 @@ async function doPopulate() {
                                 console.log(color_error, "ERROR: Post not found in database");
                                 callback();
                             }
-                        } else { //Else no actor found
-                            console.log(color_error, "ERROR: Actor not found in database");
-                            console.log(act)
+                        } else {
+                            console.log(color_error, "ERROR: Actor not found in database and no fallback matched for " + new_reply.actor);
+                            callback();
                         }
                     },
                     function(err) {
@@ -250,6 +250,37 @@ String.prototype.capitalize = function() {
 //Transforms a time like -12:32 (minus 12 hours and 32 minutes) into a time in milliseconds
 //Positive numbers indicate future posts (after they joined), Negative numbers indicate past posts (before they joined)
 //Format: (+/-)HH:MM
+/**
+ * replies.csv references many usernames that are not listed in actors.csv. Populate used to skip
+ * those rows (and never call async callback), so comments never attached. Map missing names to a
+ * stable pool of existing simulation actors so each CSV username still maps to one avatar.
+ */
+var REPLY_ACTOR_FALLBACK_USERNAMES = [
+    'BrightMantis593', 'DarkBison924', 'BrightCicada455', 'SlyTermite356', 'MightyMoth276',
+    'BoldCicada527', 'FierceCicada432', 'JollyTiger498', 'NobleMoth136', 'SilentOtter783'
+];
+
+function hashUsername(s) {
+    var h = 0;
+    var str = String(s || '');
+    for (var i = 0; i < str.length; i++) {
+        h = ((h << 5) - h) + str.charCodeAt(i);
+        h |= 0;
+    }
+    return Math.abs(h);
+}
+
+async function resolveReplyActor(username) {
+    var act = await Actor.findOne({ username: username }).exec();
+    if (act) {
+        return act;
+    }
+    var idx = hashUsername(username) % REPLY_ACTOR_FALLBACK_USERNAMES.length;
+    var fallback = REPLY_ACTOR_FALLBACK_USERNAMES[idx];
+    console.log(color_start, 'Reply username "' + username + '" not in actors DB; using fallback "' + fallback + '"');
+    return Actor.findOne({ username: fallback }).exec();
+}
+
 function timeStringToNum(v) {
     var timeParts = v.split(":");
     if (timeParts[0] == "-0")

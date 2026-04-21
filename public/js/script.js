@@ -175,10 +175,6 @@ $(window).on("load", function() {
         if (!currentCard.find("video")[0].paused) {
             currentCard.find("video").trigger("pause");
         }
-        if (window.location.pathname == "/tutorial") {
-            window.location.href = "/trans";
-        } else {
-            resetActiveTimer(true, false);
-        }
+        resetActiveTimer(true, false);
     })
 });

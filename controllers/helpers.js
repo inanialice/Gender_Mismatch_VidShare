@@ -1,6 +1,7 @@
 const _ = require('lodash');
 const Script = require('../models/Script.js');
 const Actor = require('../models/Actor');
+const User = require('../models/User');
 
 /**
  * This is a helper function. It takes in a User document. 
@@ -21,10 +22,14 @@ exports.getFeed = async function(user) {
         .exec();
 
     if (user.group != "None-True") {
-        script_feed[2].comments[0].body = "Another pointless video. Ever consider that no one cares?";
-        script_feed[2].comments[0].likes = 1;
-        script_feed[2].comments[0].unlikes = 1;
-        script_feed[2].comments[0].class = 'offense7';
+        var offensePost = script_feed[2];
+        var offenseComment = offensePost && Array.isArray(offensePost.comments) ? offensePost.comments[0] : null;
+        if (offenseComment) {
+            offenseComment.body = "Another pointless video. Ever consider that no one cares?";
+            offenseComment.likes = 1;
+            offenseComment.unlikes = 1;
+            offenseComment.class = 'offense7';
+        }
     }
 
     // Final array of all posts to go in the feed
@@ -217,17 +222,38 @@ exports.getTutorial = async function(user) {
         [3, 2]
     ];
 
+    const getTargetComment = (videoIndex, commentIndex) => {
+        if (!script_feed[videoIndex] || !Array.isArray(script_feed[videoIndex].comments)) {
+            return null;
+        }
+        return script_feed[videoIndex].comments[commentIndex] || null;
+    };
+
     for (const harassmentNum in user.harassmentOrder) {
         const locationToReplace = videoIndexCommentIndex_HarassmentComments[harassmentNum];
-        script_feed[locationToReplace[0]].comments[locationToReplace[1]].body = harassmentComments[user.harassmentOrder[harassmentNum]];
-        script_feed[locationToReplace[0]].comments[locationToReplace[1]].class = `offense${parseInt(harassmentNum)+1}`;
-        script_feed[locationToReplace[0]].comments[locationToReplace[1]].likes = 1;
-        script_feed[locationToReplace[0]].comments[locationToReplace[1]].unlikes = 1;
+        if (!locationToReplace) {
+            continue;
+        }
+        const targetComment = getTargetComment(locationToReplace[0], locationToReplace[1]);
+        if (!targetComment) {
+            continue;
+        }
+        targetComment.body = harassmentComments[user.harassmentOrder[harassmentNum]];
+        targetComment.class = `offense${parseInt(harassmentNum)+1}`;
+        targetComment.likes = 1;
+        targetComment.unlikes = 1;
     }
 
     for (const index in user.harassmentToObjectToOrder) {
         const harassmentNum = user.harassmentToObjectToOrder[index];
         const locationToReplace = videoIndexCommentIndex_HarassmentComments[harassmentNum];
+        if (!locationToReplace) {
+            continue;
+        }
+        const targetComment = getTargetComment(locationToReplace[0], locationToReplace[1]);
+        if (!targetComment || !Array.isArray(targetComment.subcomments)) {
+            continue;
+        }
 
         const subcomment = {
             commentID: commentID,
@@ -243,22 +269,45 @@ exports.getTutorial = async function(user) {
             unliked: false
         };
 
-        script_feed[locationToReplace[0]].comments[locationToReplace[1]].subcomments.push(subcomment);
+        targetComment.subcomments.push(subcomment);
         commentID++;
         counter++;
     }
 
     // Add comment times to comments:
     for (const video_index in script_feed) {
+        if (!Array.isArray(script_feed[video_index].comments)) {
+            continue;
+        }
         for (const comment_index in script_feed[video_index].comments) {
-            script_feed[video_index].comments[comment_index].time = user.commentTimes[video_index][comment_index];
+            const commentTime =
+                Array.isArray(user.commentTimes) &&
+                Array.isArray(user.commentTimes[video_index]) ?
+                user.commentTimes[video_index][comment_index] :
+                undefined;
+            if (commentTime !== undefined) {
+                script_feed[video_index].comments[comment_index].time = commentTime;
+            }
         }
     }
 
     // Add subcomment time to first video, first comment:
-    script_feed[0].comments[0].subcomments[0].time = user.subcommentTimes[6];
+    if (
+        script_feed[0] &&
+        Array.isArray(script_feed[0].comments) &&
+        script_feed[0].comments[0] &&
+        Array.isArray(script_feed[0].comments[0].subcomments) &&
+        script_feed[0].comments[0].subcomments[0] &&
+        Array.isArray(user.subcommentTimes) &&
+        user.subcommentTimes[6] !== undefined
+    ) {
+        script_feed[0].comments[0].subcomments[0].time = user.subcommentTimes[6];
+    }
 
     script_feed = script_feed.map(function(post) {
+        if (!Array.isArray(post.comments)) {
+            return post;
+        }
         post.comments.sort(function(a, b) {
             return b.time - a.time;
         })
@@ -266,4 +315,83 @@ exports.getTutorial = async function(user) {
     });
 
     return script_feed;
+};
+
+/**
+ * Actor CSV "picture" is either an SVG under people_profiles/ (e.g. 39_man_medium_navy-short.svg)
+ * or a label like "Initials (SA)". The latter should render as text, not an image URL.
+ */
+function actorPictureIsInitials(picture) {
+    if (!picture || typeof picture !== 'string') {
+        return false;
+    }
+    return /^\s*Initials\s*\(/i.test(picture.trim());
 }
+
+function actorInitialsFromPicture(picture) {
+    if (!picture || typeof picture !== 'string') {
+        return '';
+    }
+    var m = picture.match(/Initials\s*\(([^)]+)\)/i);
+    return m ? m[1].trim() : '';
+}
+
+exports.actorPictureIsInitials = actorPictureIsInitials;
+exports.actorInitialsFromPicture = actorInitialsFromPicture;
+
+/** SVG used when actor.profile.picture is empty (e.g. channel accounts with no avatar asset). */
+exports.defaultPeopleProfileFilename = '01_woman_light_gray.svg';
+
+/**
+ * URL for a people_profiles image, or default when picture is blank.
+ * Not used for Initials(...) rows (those render as text).
+ */
+function actorPeopleProfileImgSrc(picture) {
+    var def = '/people_profiles/' + exports.defaultPeopleProfileFilename;
+    if (picture == null || typeof picture !== 'string') {
+        return def;
+    }
+    var t = picture.trim();
+    if (!t || actorPictureIsInitials(t)) {
+        return def;
+    }
+    return '/people_profiles/' + t;
+}
+
+exports.actorPeopleProfileImgSrc = actorPeopleProfileImgSrc;
+
+const SIGNUP_USERNAME_REGEX = /^[a-z0-9_]{3,24}$/;
+
+function escapeRegexForUsername(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Validates and normalizes a username for signup (lowercase storage, case-insensitive clash checks).
+ * @returns {{ ok: true, normalized: string } | { ok: false, message: string }}
+ */
+exports.validateSignupUsername = async function(raw, mturkId) {
+    if (raw == null || typeof raw !== 'string') {
+        return { ok: false, message: 'Username is required.' };
+    }
+    const normalized = raw.trim().toLowerCase();
+    if (!normalized) {
+        return { ok: false, message: 'Username is required.' };
+    }
+    if (!SIGNUP_USERNAME_REGEX.test(normalized)) {
+        return {
+            ok: false,
+            message: 'Username must be 3–24 characters and use only letters, numbers, and underscores.'
+        };
+    }
+    const actorMatch = new RegExp(`^${escapeRegexForUsername(normalized)}$`, 'i');
+    const actor = await Actor.findOne({ username: actorMatch }).exec();
+    if (actor) {
+        return { ok: false, message: 'That username is not available.' };
+    }
+    const other = await User.findOne({ username: actorMatch }).exec();
+    if (other && other.mturkID !== mturkId) {
+        return { ok: false, message: 'That username is already taken.' };
+    }
+    return { ok: true, normalized };
+};

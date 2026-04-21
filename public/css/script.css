@@ -27,6 +27,134 @@ video {
     background-color: black;
 }
 
+.video-meta {
+    padding: 0.75em 0.75em 0.35em 1.25em;
+    border-top: 1px solid #ececec;
+    background: #fff;
+}
+
+.video-meta-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+}
+
+/* Creator avatar: match `.comment > .image` + `.comment > .image > a.avatar > img` (people_profiles) */
+.video-meta-avatar {
+    flex: 0 0 2.5em;
+    width: 2.5em;
+    height: 2.5em;
+    min-width: 0;
+    max-width: 2.5em;
+    max-height: 2.5em;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-sizing: border-box;
+    align-self: center;
+}
+
+.video-meta-avatar.video-meta-initials {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Mirror `.comment>.image` + anchor + img (see bottom of this file) */
+.video-meta-avatar.video-meta-photo-shell {
+    overflow: hidden;
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+}
+
+.video-meta-photo-shell>a.avatar {
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Same rule as `.comment>.image>a.avatar>img` — inset illustration, thick colored ring */
+.video-meta-photo-shell>a.avatar>img {
+    width: 65% !important;
+}
+
+.ui.fluid.card .content .video-meta-profile .video-meta-avatar.video-meta-photo-shell,
+.ui.fluid.card .content .video-meta-profile .video-meta-avatar.video-meta-initials {
+    flex: 0 0 2.5em !important;
+    width: 2.5em !important;
+    height: 2.5em !important;
+    max-width: 2.5em !important;
+    max-height: 2.5em !important;
+    min-width: 0 !important;
+    border-radius: 50% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+}
+
+.ui.fluid.card .content .video-meta-profile .video-meta-photo-shell>a.avatar>img {
+    width: 65% !important;
+    height: auto !important;
+    min-width: 0 !important;
+    object-fit: contain !important;
+    vertical-align: middle !important;
+}
+
+.video-meta-initials-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.03em;
+    color: #fff;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.ui.comments .comment .avatar.actor-initials-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5em;
+    height: 2.5em;
+}
+
+.ui.comments .comment .avatar.actor-initials-badge span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    font-weight: 600;
+    font-size: 0.75em;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: #fff;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.video-meta-user {
+    min-width: 0;
+}
+
+.video-meta-username {
+    font-size: 1.05em;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.video-meta-caption {
+    margin-top: 0.15em;
+    font-size: 0.98em;
+    line-height: 1.25;
+    color: #2a2a2a;
+}
+
 .five.wide.column.centered {
     padding: 0 !important;
     border-right: #d4d4d5 solid 1px;

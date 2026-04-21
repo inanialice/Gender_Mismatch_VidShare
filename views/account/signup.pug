@@ -17,9 +17,14 @@ block content
     h2 Create a Username
     .ui.warning.message.hidden.username
       i.close.icon 
-      .header Don't forget to create and choose a username!
-    h3 Please type your initials below to create a username. 
-    h3 We will generate 3 random available usernames based on your initials to keep your identity anonymous. Then, choose one username you would like to use.
+      .header#username-warning-header Don't forget to create or choose a username!
+    h3 Or choose your own username (3–24 characters: letters, numbers, and underscores only).
+    .ui.form
+      .field.eight.wide.centered(style="margin-left:auto;margin-right:auto;")
+        label(for="customUsername")
+          h3 Custom username
+        input#customUsername(type="text", name="customUsername", maxlength="24", placeholder="e.g. river_92", autocomplete="username")
+    h3 Or stay anonymous: type your initials below. We will suggest three random usernames from your initials; then pick one.
     .ui.form
       .fields
         .field.four.wide

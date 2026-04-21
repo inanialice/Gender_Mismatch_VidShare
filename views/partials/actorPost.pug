@@ -4,7 +4,21 @@
   .content
     .ui.two.column.grid.stackable
       .five.wide.column.centered
-        video(src=cdn+'/post_pictures/'+val.picture controls controlsList="nofullscreen" poster type='video/mp4')
+        video(controls controlsList="nofullscreen")
+          source(src='/post_pictures/'+val.picture type='video/mp4')
+          source(src=cdn+'/post_pictures/'+val.picture type='video/mp4')
+        .video-meta
+          .video-meta-profile(style='display:flex;align-items:center;gap:0.6em;')
+            if actorPictureIsInitials(val.actor.profile.picture)
+              .video-meta-avatar.video-meta-initials(role='img', aria-label='Profile', style='background-color:' + (val.actor.profile.color || '#d7ddd9') + ';width:2.5em;height:2.5em;max-width:2.5em;max-height:2.5em;min-width:0;flex:0 0 2.5em;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;box-sizing:border-box;')
+                span.video-meta-initials-text= actorInitialsFromPicture(val.actor.profile.picture)
+            else
+              .video-meta-avatar.video-meta-photo-shell(style='background-color:' + (val.actor.profile.color || '#d7ddd9') + ';width:2.5em;height:2.5em;max-width:2.5em;max-height:2.5em;min-width:0;flex:0 0 2.5em;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;box-sizing:border-box;')
+                a.avatar
+                  img(src=actorPeopleProfileImgSrc(val.actor.profile.picture), alt='profile picture')
+            .video-meta-user
+              .video-meta-username !{val.actor.username}
+              .video-meta-caption !{val.body}
         .content.buttons
           .ui.buttons.small
             .ui.left.labeled.button(class=disabledFunctionalities? "disabled": "")
@@ -46,8 +60,12 @@
                     img(src=user.profile.picture)
               else
                 .image(style="background-color:"+comment.actor.profile.color+";", class=comment.flagged ? "transition hidden": "")
-                  a.avatar
-                    img(src=cdn+'/profile_pictures/'+comment.actor.profile.picture)
+                  if actorPictureIsInitials(comment.actor.profile.picture)
+                    a.avatar.actor-initials-badge
+                      span= actorInitialsFromPicture(comment.actor.profile.picture)
+                  else
+                    a.avatar
+                      img(src=actorPeopleProfileImgSrc(comment.actor.profile.picture))
               .content(class=comment.flagged ? "transition hidden": "")
                 if comment.new_comment 
                   a.author(class='/me') !{user.username} (me)
@@ -82,8 +100,12 @@
                             img(src=user.profile.picture)
                       else
                         .image(style="background-color:"+subcomment.actor.profile.color+";", class=subcomment.flagged ? "transition hidden": "")
-                          a.avatar
-                            img(src=cdn+'/profile_pictures/'+subcomment.actor.profile.picture)
+                          if actorPictureIsInitials(subcomment.actor.profile.picture)
+                            a.avatar.actor-initials-badge
+                              span= actorInitialsFromPicture(subcomment.actor.profile.picture)
+                          else
+                            a.avatar
+                              img(src=actorPeopleProfileImgSrc(subcomment.actor.profile.picture))
                       .content(class=subcomment.flagged ? "transition hidden": "")
                           if subcomment.new_comment 
                             a.author(class='/me') !{user.username} (me)

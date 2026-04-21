@@ -45,7 +45,7 @@ $(window).on("load", async function() {
                 })
                 .done(function(json) {
                     if (json["result"] === "success") {
-                        window.location.href = '/tutorial';
+                        window.location.href = '/';
                     }
                 });
         } else {

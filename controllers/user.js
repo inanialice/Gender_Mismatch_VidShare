@@ -1,5 +1,6 @@
 const User = require('../models/User');
-const { validateSignupUsername } = require('./helpers');
+const helpers = require('./helpers');
+const { validateSignupUsername } = helpers;
 
 // From https://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
 function shuffle(array) {
@@ -41,22 +42,52 @@ function getRandomSubCommentTime(commentTime) {
     return Math.floor((Math.random() * (maxCommentTime - 60 + 1) + 60)) * -1000;
 }
 
+function normalizeProfileInitials(raw) {
+    if (raw == null || typeof raw !== 'string') {
+        return '';
+    }
+    const normalized = raw.trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(normalized)) {
+        return '';
+    }
+    return normalized;
+}
+
 /**
  * GET /logout
  * Handles user log out.
  */
 exports.logout = async(req, res) => {
-    const user = await User.findById(req.user.id).exec();
-    const r_id = user.mturkID;
-    user.logPage(Date.now(), '/thankyou');
-    req.logout((err) => {
-        if (err) console.log('Error : Failed to logout.', err);
-        req.session.destroy((err) => {
-            if (err) console.log('Error : Failed to destroy the session during logout.', err);
-            req.user = null;
-            res.redirect(`/thankyou?r_id=${r_id}`);
+    try {
+        // Allow /logout to be called safely even when no user session exists.
+        if (!req.user || !req.user.id) {
+            if (req.session) {
+                req.session.destroy(() => res.redirect('/signup'));
+                return;
+            }
+            return res.redirect('/signup');
+        }
+
+        const user = await User.findById(req.user.id).exec();
+        const r_id = user && user.mturkID ? user.mturkID : '';
+        if (user) {
+            user.logPage(Date.now(), '/thankyou');
+        }
+        req.logout((err) => {
+            if (err) console.log('Error : Failed to logout.', err);
+            req.session.destroy((err) => {
+                if (err) console.log('Error : Failed to destroy the session during logout.', err);
+                req.user = null;
+                if (r_id) {
+                    return res.redirect(`/thankyou?r_id=${r_id}`);
+                }
+                return res.redirect('/signup');
+            });
         });
-    });
+    } catch (err) {
+        console.log('Error : Failed to process logout.', err);
+        return res.redirect('/signup');
+    }
 };
 
 /**
@@ -83,15 +114,7 @@ exports.postSignup = async(req, res, next) => {
         req.query.r_id = makeid(10);
     }
 
-    let experimentalCondition;
-    if (!req.query.c_id || req.query.c_id == 'null' || req.query.c_id == 'undefined') {
-        const conditionMessages = [
-            'None', 'None-True', 'Few:None', 'Few:Few', 'Few:Many', 'Many:None', 'Many:Few', 'Many:Many'
-        ];
-        experimentalCondition = conditionMessages[(Math.floor(Math.random() * 8))];
-    } else {
-        experimentalCondition = req.query.c_id;
-    }
+    let experimentalCondition = helpers.normalizeExperimentalCondition(req.query.c_id);
     // ---- Conditions: 8 possible conditions: 6 experimentals & 2 controls ------//
     // "None": No Harassment Comments
     // "None-True": No Harassment Comments, including in behavioral data collection
@@ -104,55 +127,63 @@ exports.postSignup = async(req, res, next) => {
     // "Many:Few": 6 online harassments: 2 addressed
     // "Many:Many": 6 online harassments: 4 addressed
 
-    let harassmentOrder;
-    let harassmentToObjectToOrder;
-    let objectionOrder;
+    let harassmentOrder = [];
+    let harassmentToObjectToOrder = [];
+    let objectionOrder = [];
 
     const conditions = experimentalCondition.split(":");
+    const useLegacyHarassmentLogic = helpers.isLegacyCondition(experimentalCondition);
 
     let harassmentComments;
-    switch (conditions[0]) {
-        case "None":
-        case "None-True":
-            harassmentOrder = [];
-            break;
-        case "Few":
-            // 3 online harassments
-            harassmentOrder = [];
-            harassmentOrder.push(shuffle([0, 3])[0]);
-            harassmentOrder.push(shuffle([1, 4])[0]);
-            harassmentOrder.push(shuffle([2, 5])[0]);
-            break;
-        case "Many":
-            harassmentComments = [0, 1, 2, 3, 4, 5]; // 6 online harassments
-            harassmentOrder = shuffle(harassmentComments);
-        default:
-            break;
-    }
+    if (useLegacyHarassmentLogic) {
+        switch (conditions[0]) {
+            case "None":
+            case "None-True":
+                harassmentOrder = [];
+                break;
+            case "Few":
+                // 3 online harassments
+                harassmentOrder = [];
+                harassmentOrder.push(shuffle([0, 3])[0]);
+                harassmentOrder.push(shuffle([1, 4])[0]);
+                harassmentOrder.push(shuffle([2, 5])[0]);
+                break;
+            case "Many":
+                harassmentComments = [0, 1, 2, 3, 4, 5]; // 6 online harassments
+                harassmentOrder = shuffle(harassmentComments);
+            default:
+                break;
+        }
 
-    let objectionComments = shuffle([0, 1, 2, 3]);
-    switch (conditions[1]) {
-        case undefined:
-        case "None":
-            harassmentToObjectToOrder = [];
-            objectionOrder = [];
-            break;
-        case "Few":
-            indexes = conditions[0] == "Few" ? [0, 1, 2] : [0, 1, 2, 3, 4, 5];
-            indexes = shuffle(indexes);
-            harassmentToObjectToOrder = conditions[0] == "Few" ? indexes.slice(0, 1) : indexes.slice(0, 2);
+        let objectionComments = shuffle([0, 1, 2, 3]);
+        switch (conditions[1]) {
+            case undefined:
+            case "None":
+                harassmentToObjectToOrder = [];
+                objectionOrder = [];
+                break;
+            case "Few":
+                indexes = conditions[0] == "Few" ? [0, 1, 2] : [0, 1, 2, 3, 4, 5];
+                indexes = shuffle(indexes);
+                harassmentToObjectToOrder = conditions[0] == "Few" ? indexes.slice(0, 1) : indexes.slice(0, 2);
 
-            objectionOrder = conditions[0] == "Few" ? objectionComments.slice(0, 1) : objectionComments.slice(0, 2);
-            break;
-        case "Many":
-            indexes = conditions[0] == "Few" ? [0, 1, 2] : [0, 1, 2, 3, 4, 5];
-            indexes = shuffle(indexes);
-            harassmentToObjectToOrder = conditions[0] == "Few" ? indexes.slice(0, 2) : indexes.slice(0, 4);
+                objectionOrder = conditions[0] == "Few" ? objectionComments.slice(0, 1) : objectionComments.slice(0, 2);
+                break;
+            case "Many":
+                indexes = conditions[0] == "Few" ? [0, 1, 2] : [0, 1, 2, 3, 4, 5];
+                indexes = shuffle(indexes);
+                harassmentToObjectToOrder = conditions[0] == "Few" ? indexes.slice(0, 2) : indexes.slice(0, 4);
 
-            objectionOrder = conditions[0] == "Few" ? objectionComments.slice(0, 2) : objectionComments.slice(0, 4);
-            break;
-        default:
-            break;
+                objectionOrder = conditions[0] == "Few" ? objectionComments.slice(0, 2) : objectionComments.slice(0, 4);
+                break;
+            default:
+                break;
+        }
+    } else {
+        // Identity manipulation conditions do not use legacy frequency scheduling.
+        harassmentOrder = [];
+        harassmentToObjectToOrder = [];
+        objectionOrder = [];
     }
 
     const numComments = [3, 3, 5, 3, 5, 3];
@@ -193,13 +224,26 @@ exports.postSignup = async(req, res, next) => {
             return res.status(400).json({ result: 'error', message: usernameCheck.message });
         }
         const username = usernameCheck.normalized;
+        const profileInitials = normalizeProfileInitials(req.body.initials);
+        if (!profileInitials) {
+            res.set('Content-Type', 'application/json; charset=UTF-8');
+            return res.status(400).json({ result: 'error', message: 'Please choose two profile initials.' });
+        }
+        const profilePictureValue = `Initials (${profileInitials})`;
 
         const existingUser = await User.findOne({ mturkID: req.query.r_id }).exec();
         let user;
         if (existingUser) {
             existingUser.username = username;
-            existingUser.profile.picture = req.body.photo;
+            existingUser.profile.picture = profilePictureValue;
             existingUser.profile.name = username;
+            // Keep condition-dependent fields in sync when reusing an existing r_id.
+            existingUser.group = experimentalCondition;
+            existingUser.harassmentOrder = harassmentOrder;
+            existingUser.harassmentToObjectToOrder = harassmentToObjectToOrder;
+            existingUser.objectionOrder = objectionOrder;
+            existingUser.commentTimes = commentTimes;
+            existingUser.subcommentTimes = subcommentTimes;
             user = existingUser;
         } else {
             user = new User({
@@ -208,7 +252,7 @@ exports.postSignup = async(req, res, next) => {
                 profile: {
                     name: username,
                     color: '#a6a488',
-                    picture: req.body.photo
+                    picture: profilePictureValue
                 },
                 group: experimentalCondition,
                 harassmentOrder: harassmentOrder,

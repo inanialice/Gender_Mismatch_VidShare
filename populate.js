@@ -187,6 +187,10 @@ async function doPopulate() {
                         if (act) {
                             const pr = await Script.findOne({ postID: Number(new_reply.reply) }).exec();
                             if (pr) {
+                                const replyClass = (new_reply.class && String(new_reply.class).trim()) ?
+                                    new_reply.class :
+                                    ((new_reply['class-2'] && String(new_reply['class-2']).trim()) ? new_reply['class-2'] : '');
+
                                 let comment_detail = {
                                     commentID: new_reply.id,
                                     body: new_reply.body,
@@ -194,7 +198,7 @@ async function doPopulate() {
                                     unlikes: new_reply.dislikes || getUnlikesComment(),
                                     actor: act,
                                     time: new_reply.time ? timeStringToNum(new_reply.time) : null,
-                                    class: new_reply.class,
+                                    class: replyClass,
 
                                     subcomments: []
                                 };

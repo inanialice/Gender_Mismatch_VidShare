@@ -177,19 +177,10 @@ app.use(function(err, req, res, next) {
 // catch 404. 404 should be considered as a default behavior, not a system error.
 // Necessary to include because in express, 404 responses are not the result of an error, so the error-handler middleware will not capture them. https://expressjs.com/en/starter/faq.html 
 app.use(function(req, res, next) {
-    var err = new Error('Page Not Found.');
-    err.status = 404;
-
-    console.log(err);
-
-    // set locals, only providing error stack in development
-    err.stack = req.app.get('env') === 'development' ? err.stack : '';
-
-    res.locals.message = err.message + " Oops! We can't seem to find the page you're looking for.";
-    res.locals.error = err;
-
-    // render the error page
-    res.status(err.status);
+    console.log('404 Not Found:', req.originalUrl);
+    res.locals.message = "Page Not Found. Oops! We can't seem to find the page you're looking for.";
+    res.locals.error = {};
+    res.status(404);
     res.render('error');
 });
 

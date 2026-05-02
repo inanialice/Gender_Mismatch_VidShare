@@ -124,7 +124,29 @@ video {
     height: 2.5em;
 }
 
+.ui.form .inline.field .image .avatar.actor-initials-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
 .ui.comments .comment .avatar.actor-initials-badge span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    font-weight: 600;
+    font-size: 1.02em;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: #fff;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.ui.form .inline.field .image .avatar.actor-initials-badge span {
     display: flex;
     align-items: center;
     justify-content: center;

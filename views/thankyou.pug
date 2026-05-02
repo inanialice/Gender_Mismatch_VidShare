@@ -1,6 +1,8 @@
 extends ./ui_layout
 
 block content
+  - var postSurveyBase = process.env.POST_SURVEY || ''
+  - var surveyLink = postSurveyBase ? postSurveyBase + (r_id || '') : ''
   .thirteen.wide.column.centered
     h2(style="text-align:center; font-weight: normal;") Thank you for engaging on
       img(src=cdn+'/favicon.svg', height="50px", style="margin-bottom:-10px")
@@ -8,8 +10,9 @@ block content
       | !
     h2(style="text-align:center;") Please now 
       span(style="text-decoration: underline") return to the Qualtrics Survey
-    h2 
-      a(href=process.env.POST_SURVEY+r_id) !{process.env.POST_SURVEY+r_id}
+    if surveyLink
+      h2
+        a(href=surveyLink) Return to survey
     h2 to answer some questions.
       
 block styles 

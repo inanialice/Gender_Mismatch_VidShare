@@ -7,7 +7,11 @@
         .right.menu
           .ui.simple.dropdown.item
             .image
-              img.ui.image.rounded(src=user.profile.picture)
+              if actorPictureIsInitials(user.profile.picture)
+                .header-initials-badge
+                  span= actorInitialsFromPicture(user.profile.picture)
+              else
+                img.ui.image.rounded(src=user.profile.picture)
             span(style="margin-right: 5px;")= user.username
 .mobile.only.row
   .ui.fluid.top.fixed.four.item.menu
@@ -18,5 +22,9 @@
         .right.menu
           .ui.simple.dropdown.item
             .image
-              img.ui.image.rounded(src=user.profile.picture)
+              if actorPictureIsInitials(user.profile.picture)
+                .header-initials-badge
+                  span= actorInitialsFromPicture(user.profile.picture)
+              else
+                img.ui.image.rounded(src=user.profile.picture)
             span(style="margin-right: 5px;")= user.username

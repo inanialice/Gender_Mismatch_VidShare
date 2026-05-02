@@ -38,24 +38,19 @@ async function getUserJsons() {
   Gets the mongoDB object id value of the offense message.
 */
 async function getOffenseId(interest) {
-    const videoIndexes = {
-        'Science': 8,
-        'Education': 17,
-        'Lifestyle': 26
-    };
-
-    const commentIDs = {
-        'Science': 29,
-        'Education': 61,
-        'Lifestyle': 93
-    }
-
-    const videoObj = await Script
-        .find({ class: interest, postID: videoIndexes[interest] })
+    const videoObjs = await Script
+        .find({ class: interest })
+        .sort({ postID: -1 })
+        .limit(1)
         .exec();
-
-    let offenseObj = videoObj[0].comments.find(comment => comment.commentID == commentIDs[interest]);
-    return offenseObj.id;
+    if (!videoObjs.length || !Array.isArray(videoObjs[0].comments)) {
+        return null;
+    }
+    const offenseObj = videoObjs[0].comments.find(comment =>
+        String(comment.class || '').indexOf('offense') === 0 ||
+        String(comment.body || '').indexOf('Manipulated Harassment Message') === 0
+    );
+    return offenseObj ? offenseObj.id : null;
 }
 
 async function getDataExport() {
@@ -238,7 +233,7 @@ async function getDataExport() {
                 if (feedAction.flagged) {
                     VideoFlagNumber++;
                 }
-                const generalComments = user.interest != "None-True" ?
+                const generalComments = user.group != "None-True" && offenseId ?
                     feedAction.comments.filter(comment =>
                         !comment.new_comment &&
                         comment.comment.toString() != offenseId) :
@@ -248,12 +243,10 @@ async function getDataExport() {
                 const numLikes = generalComments.filter(comment => comment.liked).length;
                 const numDislikes = generalComments.filter(comment => comment.unliked).length;
                 const numFlagged = generalComments.filter(comment => comment.flagged).length;
-                const newComments = user.interest != "None-True" ?
+                const newComments = user.group != "None-True" && offenseId ?
                     feedAction.comments.filter(comment =>
                         comment.new_comment &&
-                        comment.reply_to != 29 &&
-                        comment.reply_to != 61 &&
-                        comment.reply_to != 93) :
+                        String(comment.reply_to || '') != String(offenseId)) :
                     feedAction.comments.filter(comment =>
                         comment.new_comment);
                 const numNewComments = newComments.length;
@@ -268,14 +261,14 @@ async function getDataExport() {
                 record[`V${video}_CommentFlagNumber`] = numFlagged;
                 record[`V${video}_PostComments`] = numNewComments;
 
-                if (video == 9 && user.interest != "None-True") {
+                if (video == 9 && user.group != "None-True" && offenseId) {
                     // Offense 
                     const offObj = feedAction.comments.find(comment => !comment.new_comment && comment.comment.toString() == offenseId);
                     record.Off7_Upvote = (offObj != undefined) ? offObj.liked : false;
                     record.Off7_Downvote = (offObj != undefined) ? offObj.unliked : false;
                     record.Off7_Flag = (offObj != undefined) ? offObj.flagged : false;
 
-                    const replyToOffense = feedAction.comments.filter(comment => [29, 61, 93].includes(comment.reply_to));
+                    const replyToOffense = feedAction.comments.filter(comment => String(comment.reply_to || '') == String(offenseId));
                     if (replyToOffense.length != 0) {
                         let string = "";
                         replyToOffense.forEach(comment => { string += comment.new_comment_id + (comment.reply_to ? " (is a reply to " + comment.reply_to + ")" : "") + ": " + comment.body + "\r\n" });

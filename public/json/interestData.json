@@ -1,14 +1,14 @@
 {
-    "Science": {
-        "Icon": "flask",
-        "Title": "Science and Technology"
+    "Nature": {
+        "Icon": "leaf",
+        "Title": "Nature"
     },
-    "Education": {
-        "Icon": "book",
-        "Title": "Education"
+    "Earth": {
+        "Icon": "globe",
+        "Title": "Earth"
     },
-    "Lifestyle": {
-        "Icon": "heartbeat",
-        "Title": "Health and Lifestyle"
+    "Space": {
+        "Icon": "moon",
+        "Title": "Space"
     }
 }

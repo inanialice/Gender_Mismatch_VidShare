@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema({
     commentTimes: [], // Lists of arrays of comment times for each video in the tutorial section.
     subcommentTimes: [], // List of subcomment times (6 values for objection comments, corresponding to their order of replacement; 1 value for first video, first comment's subcomment)
 
-    interest: String, //'Science', 'Lifestyle', 'Education'
+    interest: String, //'Nature', 'Earth', 'Space'
 
     log: [new Schema({ //Logins
         time: Date,

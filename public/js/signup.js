@@ -43,6 +43,19 @@ function hasValidUsername() {
     return $(USERNAME_BUTTONS + '.green').length > 0;
 }
 
+function getSelectedProfileInitials() {
+    const first = ($('select[name="profileFirstInitial"]').val() || '').trim();
+    const last = ($('select[name="profileLastInitial"]').val() || '').trim();
+    if (!/^[A-Z]$/i.test(first) || !/^[A-Z]$/i.test(last)) {
+        return '';
+    }
+    return `${first}${last}`.toUpperCase();
+}
+
+function hasChosenProfileInitials() {
+    return getSelectedProfileInitials().length === 2;
+}
+
 function setUsernameWarning(text) {
     $('#username-warning-header').text(text);
 }
@@ -60,8 +73,8 @@ function hideUsernameWarningIfResolved() {
 
 function canContinue() {
     const hasUsername = hasChosenUsername();
-    const hasPicture = $('.image.green').length > 0;
-    if (hasUsername && hasPicture) {
+    const hasInitials = hasChosenProfileInitials();
+    if (hasUsername && hasInitials) {
         $(".ui.big.labeled.icon.button").addClass("green");
     } else {
         $(".ui.big.labeled.icon.button").removeClass("green");
@@ -78,32 +91,41 @@ $(window).on("load", async function() {
     $('.ui.dropdown').dropdown({
         // Choose an initial
         onChange: function(value, text, $selectedItem) {
-            // clear any usernames waiting to be loaded
-            clearTimeout(timeout);
-            $(USERNAME_BUTTONS + " h2.username").empty();
-            $(USERNAME_BUTTONS).removeClass("green");
+            const fieldName = $(this).attr('name');
 
-            const firstInitial = $('select[name="firstInitial"]').val();
-            const lastInitial = $('select[name="lastInitial"]').val();
+            if (fieldName === 'firstInitial' || fieldName === 'lastInitial') {
+                // clear any usernames waiting to be loaded
+                clearTimeout(timeout);
+                $(USERNAME_BUTTONS + " h2.username").empty();
+                $(USERNAME_BUTTONS).removeClass("green");
 
-            if (firstInitial !== '' && lastInitial !== '') {
-                $(USERNAME_BUTTONS).addClass("loading");
-                const randomNames = [];
-                while (randomNames.length < 3) {
-                    const randomNumber = String(getRandomInt(1, 999)).padStart(3, '0');
-                    const randomName = `${firstInitial.toLowerCase()}${lastInitial.toLowerCase()}${randomNumber}`;
-                    if (!randomNames.includes(randomName) && !actorUserNames.includes(randomName)) {
-                        randomNames.push(randomName);
+                const firstInitial = $('select[name="firstInitial"]').val();
+                const lastInitial = $('select[name="lastInitial"]').val();
+
+                if (firstInitial !== '' && lastInitial !== '') {
+                    $(USERNAME_BUTTONS).addClass("loading");
+                    const randomNames = [];
+                    while (randomNames.length < 3) {
+                        const randomNumber = String(getRandomInt(1, 999)).padStart(3, '0');
+                        const randomName = `${firstInitial.toLowerCase()}${lastInitial.toLowerCase()}${randomNumber}`;
+                        if (!randomNames.includes(randomName) && !actorUserNames.includes(randomName)) {
+                            randomNames.push(randomName);
+                        }
                     }
+                    timeout = setTimeout(function() {
+                        $(USERNAME_BUTTONS).removeClass("loading");
+                        for (var i = 0; i < 3; i++) {
+                            $(`h2.username_${i+1}`).text(randomNames[i]);
+                        }
+                    }, 750);
                 }
-                timeout = setTimeout(function() {
-                    $(USERNAME_BUTTONS).removeClass("loading");
-                    for (var i = 0; i < 3; i++) {
-                        $(`h2.username_${i+1}`).text(randomNames[i]);
-                    }
-                }, 750);
             }
             canContinue();
+            if (fieldName === 'profileFirstInitial' || fieldName === 'profileLastInitial') {
+                if ($('.ui.warning.message.initials').is(":visible") && hasChosenProfileInitials()) {
+                    $('.ui.warning.message.initials').hide();
+                }
+            }
         }
     });
 
@@ -138,25 +160,9 @@ $(window).on("load", async function() {
         }
     });
 
-    // Click a photo
-    $('a.avatar').on('click', function() {
-        // clear any photos selected
-        $('.image').removeClass("green");
-        $(".image i.icon.green.check").addClass("hidden");
-
-        $(this).parent('.image').addClass("green");
-        $(this).siblings('i.icon').removeClass("hidden");
-
-        canContinue();
-
-        if ($('.ui.warning.message.photo').is(":visible")) {
-            $('.ui.warning.message.photo').hide();
-        }
-    });
-
     $(".ui.big.labeled.icon.button").on('click', function() {
         const username = getResolvedUsername();
-        const src = $('.image.green a.avatar img').attr('src');
+        const profileInitials = getSelectedProfileInitials();
         const custom = $('#customUsername').val().trim();
 
         if ($(this).hasClass("green")) {
@@ -171,7 +177,7 @@ $(window).on("load", async function() {
             $(this).addClass('loading disabled');
             $.post(`/signup${window.location.search}`, {
                 username: username,
-                photo: src,
+                initials: profileInitials,
                 _csrf: $('meta[name="csrf-token"]').attr('content')
             }).done(function(json) {
                 if (json["result"] === "success") {
@@ -206,10 +212,10 @@ $(window).on("load", async function() {
                     setUsernameWarning(DEFAULT_USERNAME_WARNING);
                 }
             }
-            if (src === undefined || src.trim() === '') {
-                if ($('.ui.warning.message.photo').is(":hidden")) {
-                    $('.ui.warning.message.photo').show();
-                    $('.ui.warning.message.photo').removeClass("hidden");
+            if (!hasChosenProfileInitials()) {
+                if ($('.ui.warning.message.initials').is(":hidden")) {
+                    $('.ui.warning.message.initials').show();
+                    $('.ui.warning.message.initials').removeClass("hidden");
                 }
             }
             $('.ui.warning.message')[0].scrollIntoView({

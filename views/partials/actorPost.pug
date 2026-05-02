@@ -41,7 +41,11 @@
         .ui.form
           .inline.field
             .image
-              img.ui.image.rounded(src=user.profile.picture)
+              if actorPictureIsInitials(user.profile.picture)
+                a.avatar.actor-initials-badge
+                  span= actorInitialsFromPicture(user.profile.picture)
+              else
+                img.ui.image.rounded(src=user.profile.picture)
             textarea.replyToVideo(name='replyToVideo' type='text' placeholder='Add a Comment...' rows='1' disabled=disabledFunctionalities? true: false)
             i.big.send.link.icon.replyToVideo
         h4(style="text-align: right; color: gray;") Sort by: Newest First
@@ -56,8 +60,12 @@
                   a.unflag Unflag
               if comment.new_comment 
                 .image(style="background-color:"+user.profile.color+";", class=comment.flagged ? "transition hidden": "")
-                  a.avatar
-                    img(src=user.profile.picture)
+                  if actorPictureIsInitials(user.profile.picture)
+                    a.avatar.actor-initials-badge
+                      span= actorInitialsFromPicture(user.profile.picture)
+                  else
+                    a.avatar
+                      img(src=user.profile.picture)
               else
                 .image(style="background-color:"+comment.actor.profile.color+";", class=comment.flagged ? "transition hidden": "")
                   if actorPictureIsInitials(comment.actor.profile.picture)
@@ -96,8 +104,12 @@
                           a.unflag Unflag
                       if subcomment.new_comment 
                         .image(style="background-color:"+user.profile.color+";", class=subcomment.flagged ? "transition hidden": "")
-                          a.avatar
-                            img(src=user.profile.picture)
+                          if actorPictureIsInitials(user.profile.picture)
+                            a.avatar.actor-initials-badge
+                              span= actorInitialsFromPicture(user.profile.picture)
+                          else
+                            a.avatar
+                              img(src=user.profile.picture)
                       else
                         .image(style="background-color:"+subcomment.actor.profile.color+";", class=subcomment.flagged ? "transition hidden": "")
                           if actorPictureIsInitials(subcomment.actor.profile.picture)

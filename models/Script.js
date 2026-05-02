@@ -10,7 +10,7 @@ const scriptSchema = new mongoose.Schema({
     actor: { type: Schema.ObjectId, ref: 'Actor' }, //actor of post
     time: Number,
 
-    class: String, //For experimental use (used to define the type of post: Science, Education, Lifestyle)
+    class: String, //For experimental use (used to define the type of post: Nature, Earth, Space)
     length: Number, //length of video in seconds
 
     // Sorted by least recent --> most recent

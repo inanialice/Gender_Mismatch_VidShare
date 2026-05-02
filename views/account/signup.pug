@@ -2,7 +2,6 @@ extends ../ui_layout
 
 block content
   -var initials = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"] 
-  -var photos = ['/1_ant.svg', '/2_bear.svg', '/3_butterfly.svg', '/4_cat.svg','/5_chicken.svg','/6_crab.svg','/7_deer.svg','/8_gorilla.svg','/9_dog.svg','/10_monkey.svg']
   .thirteen.wide.column.centered
     h1(style="text-align:center;") Welcome to
       img(src=cdn+'/favicon.svg', height="50px", style="margin-bottom:-10px")
@@ -50,18 +49,27 @@ block content
         button.ui.button 
           h2.username_3.username &nbsp;
     //- .ui.divider
-    h2 Choose a Profile Picture
-    .ui.warning.message.hidden.photo
+    h2 Choose Profile Initials
+    .ui.warning.message.hidden.initials
       i.close.icon 
-      .header Don't forget to choose a profile picture!
-    h3 Please also choose a profile picture from below to use.
+      .header Don't forget to choose profile initials!
+    h3 Choose the initials you want shown on your profile badge.
     .ui.form
-      .images
-        each filename in photos
-          .image
-            a.avatar
-              img(src=cdn+"/profile_pictures"+filename)
-            i.icon.green.check.hidden
+      .fields
+        .field.four.wide
+          label 
+            h3 Profile First Initial:
+          select.ui.search.dropdown.fluid(name="profileFirstInitial")
+            option(value='') Select Initial
+            each letter in initials
+              option(value=letter) #{letter}
+        .field.four.wide
+          label 
+            h3 Profile Last Initial:
+          select.ui.search.dropdown.fluid(name="profileLastInitial")
+            option(value='') Select Initial
+            each letter in initials
+              option(value=letter) #{letter}
     .ui.big.labeled.icon.button
       i.arrow.alternate.circle.right.icon
       | Create Account

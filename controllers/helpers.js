@@ -3,6 +3,160 @@ const Script = require('../models/Script.js');
 const Actor = require('../models/Actor');
 const User = require('../models/User');
 
+const LEGACY_CONDITIONS = ['None', 'None-True', 'Few:None', 'Few:Few', 'Few:Many', 'Many:None', 'Many:Few', 'Many:Many'];
+const DEFAULT_IDENTITY_CONDITION = 'female:unknown';
+
+const IDENTITY_MAPPINGS = {
+    victim: {
+        male: { username: 'Dave.dusty256', picture: 'victim_male.svg' },
+        female: { username: 'Sarah.lunar256', picture: 'victim_female.svg' }
+    },
+    counterspeaker: {
+        male: { username: 'Mike7_Frosty', picture: 'counterspeaker_male.svg' },
+        female: { username: 'Ashley7_Neon', picture: 'counterspeaker_female.svg' },
+        // No dedicated unknown file exists in people_profiles, so use a neutral default asset.
+        unknown: { username: 'Koala7_Wild', picture: '01_woman_light_gray.svg' }
+    }
+};
+
+const HARASSMENT_COMMENTS = {
+    male: [
+        "I can't take male creators seriously anymore. Stuff like this is just embarrassing.",
+        "Typical male creators at it again. They always manage to make things worse.",
+        "Male creators really thought this was a good idea. It looks completely ridiculous.",
+        "I knew this had to be from male creators. They are so predictable sometimes.",
+        "Male creators keep doing things like this online. It never stops being cringe.",
+        "Another example of male creators embarrassing themselves. Nobody is surprised anymore.",
+        "Male creators always find new ways to disappoint people. This is no exception.",
+        "I don't know why male creators act like this publicly. It is painful to watch.",
+        "Male creators always think they are saying something important. This says nothing.",
+        "Every time I trust male creators, I regret it. Posts like this remind me why.",
+        "Male creators really love making a mess of things. This is chaos.",
+        "People wonder why male creators get criticized so much. Moments like this explain it.",
+        "Male creators make it hard to defend them sometimes. This is one of those times.",
+        "Another day, another male creators disaster. It is almost expected now.",
+        "Male creators keep lowering the bar somehow. This is impressive in the worst way.",
+        "I tried giving male creators a chance. Then I saw this nonsense.",
+        "Male creators always seem so unserious. This proves it again.",
+        "Nobody embarrasses themselves like male creators. They do it effortlessly.",
+        "Male creators should know better than this. It looks foolish.",
+        "This is why I avoid male creators. Things like this are exhausting."
+    ],
+    female: [
+        "I can't take female creators seriously anymore. Stuff like this is just embarrassing.",
+        "Typical female creators at it again. They always manage to make things worse.",
+        "Female creators really thought this was a good idea. It looks completely ridiculous.",
+        "I knew this had to be from female creators. They are so predictable sometimes.",
+        "Female creators keep doing things like this online. It never stops being cringe.",
+        "Another example of female creators embarrassing themselves. Nobody is surprised anymore.",
+        "Female creators always find new ways to disappoint people. This is no exception.",
+        "I don't know why female creators act like this publicly. It is painful to watch.",
+        "Female creators always think they are saying something important. This says nothing.",
+        "Every time I trust female creators, I regret it. Posts like this remind me why.",
+        "Female creators really love making a mess of things. This is chaos.",
+        "People wonder why female creators get criticized so much. Moments like this explain it.",
+        "Female creators make it hard to defend them sometimes. This is one of those times.",
+        "Another day, another female creators disaster. It is almost expected now.",
+        "Female creators keep lowering the bar somehow. This is impressive in the worst way.",
+        "I tried giving female creators a chance. Then I saw this nonsense.",
+        "Female creators always seem so unserious. This proves it again.",
+        "Nobody embarrasses themselves like female creators. They do it effortlessly.",
+        "Female creators should know better than this. It looks foolish.",
+        "This is why I avoid female creators. Things like this are exhausting."
+    ]
+};
+
+const COUNTERSPEECH_COMMENTS = [
+    "I don't see what gender has to do with this. Everyone deserves to have their efforts treated with respect. You should apologize.",
+    "Gender has nothing to do with the situation here. Showing basic respect for other people's work is the minimum we can do. You should apologize.",
+    "I fail to see why gender was brought into this at all. People's efforts deserve respect regardless. You should apologize.",
+    "This has nothing to do with gender in any way. Respecting what others put effort into should be standard. You should apologize.",
+    "I don't understand why gender was mentioned here. Treating each other's work with respect is basic decency. You should apologize.",
+    "Gender is completely irrelevant to this issue. Everyone's efforts should be met with respect. You should apologize.",
+    "I'm not sure why gender was made part of this conversation. Respect for other people's effort should come first. You should apologize.",
+    "Gender has no place in this comment. The least we can do is respect what others worked on. You should apologize.",
+    "I don't see any reason to make this about gender. People deserve respect for the effort they put in. You should apologize.",
+    "There was no need to bring gender into this. Treating others and their work respectfully is the bare minimum. You should apologize.",
+    "I don't get how gender is relevant here. Respecting each other's contributions should be expected. You should apologize.",
+    "Gender is beside the point in this case. Everyone's effort deserves common respect. You should apologize.",
+    "I don't see why this was framed around gender. The minimum standard is respecting one another's efforts. You should apologize.",
+    "This did not need to involve gender. Showing respect for what others create is basic courtesy. You should apologize.",
+    "Gender has nothing to do with whether this was good or bad. Respecting the work people put in still matters. You should apologize.",
+    "I can't see how gender is relevant to any of this. We should at least respect each other's effort. You should apologize.",
+    "There is no reason gender should be part of this discussion. Treating people's work with respect is the least we can do. You should apologize.",
+    "I don't see the connection between gender and this issue. Everyone deserves respect for their effort. You should apologize.",
+    "Gender is not the issue here at all. Showing respect toward what others tried to do is the minimum standard. You should apologize.",
+    "I fail to see how gender matters in this context. Respecting each other's efforts should come naturally. You should apologize."
+];
+
+function parseIdentityCondition(condition) {
+    const text = String(condition || '').trim().toLowerCase();
+    const parts = text.split(':');
+    if (parts.length !== 2) {
+        return null;
+    }
+    const victimGender = parts[0];
+    const counterspeakerGender = parts[1];
+    if (!IDENTITY_MAPPINGS.victim[victimGender] || !IDENTITY_MAPPINGS.counterspeaker[counterspeakerGender]) {
+        return null;
+    }
+    return {
+        victimGender: victimGender,
+        counterspeakerGender: counterspeakerGender,
+        normalized: victimGender + ':' + counterspeakerGender
+    };
+}
+
+function isLegacyCondition(condition) {
+    return LEGACY_CONDITIONS.indexOf(String(condition || '').trim()) >= 0;
+}
+
+function normalizeExperimentalCondition(condition) {
+    const parsedIdentity = parseIdentityCondition(condition);
+    if (parsedIdentity) {
+        return parsedIdentity.normalized;
+    }
+    if (isLegacyCondition(condition)) {
+        return String(condition).trim();
+    }
+    return DEFAULT_IDENTITY_CONDITION;
+}
+
+function hashSeed(seed) {
+    let h = 0;
+    const s = String(seed || '');
+    for (let i = 0; i < s.length; i++) {
+        h = ((h << 5) - h) + s.charCodeAt(i);
+        h |= 0;
+    }
+    return Math.abs(h);
+}
+
+function seededPick(list, seed) {
+    if (!Array.isArray(list) || list.length === 0) {
+        return '';
+    }
+    return list[hashSeed(seed) % list.length];
+}
+
+function replaceActorIdentity(actorDoc, identity) {
+    if (!actorDoc || !identity) {
+        return;
+    }
+    actorDoc.username = identity.username;
+    if (actorDoc.profile) {
+        actorDoc.profile.picture = identity.picture;
+    }
+}
+
+function isHarassmentPlaceholder(comment) {
+    if (!comment) {
+        return false;
+    }
+    const body = String(comment.body || '');
+    return body.indexOf('Manipulated Harassment Message') === 0;
+}
+
 /**
  * This is a helper function. It takes in a User document. 
  * Function processes and returns a final feed of posts that accounts for the user's interactions with posts.
@@ -21,7 +175,9 @@ exports.getFeed = async function(user) {
         .populate('comments.subcomments.actor')
         .exec();
 
-    if (user.group != "None-True") {
+    // Legacy override for old frequency-based conditions only.
+    // For identity conditions (male/female/unknown), keep CSV-authored comments.
+    if (isLegacyCondition(user.group) && user.group != "None-True") {
         var offensePost = script_feed[2];
         var offenseComment = offensePost && Array.isArray(offensePost.comments) ? offensePost.comments[0] : null;
         if (offenseComment) {
@@ -30,6 +186,53 @@ exports.getFeed = async function(user) {
             offenseComment.unlikes = 1;
             offenseComment.class = 'offense7';
         }
+    }
+
+    const parsedIdentityCondition = parseIdentityCondition(user.group);
+    if (parsedIdentityCondition) {
+        const victimIdentity = IDENTITY_MAPPINGS.victim[parsedIdentityCondition.victimGender];
+        const counterspeakerIdentity = IDENTITY_MAPPINGS.counterspeaker[parsedIdentityCondition.counterspeakerGender];
+
+        for (const post of script_feed) {
+            if (post && post.actor && post.actor.username === 'Manipulated User Name') {
+                replaceActorIdentity(post.actor, victimIdentity);
+            }
+
+            if (!post || !Array.isArray(post.comments)) {
+                continue;
+            }
+
+            for (const comment of post.comments) {
+                if (isHarassmentPlaceholder(comment)) {
+                    comment.body = seededPick(
+                        HARASSMENT_COMMENTS[parsedIdentityCondition.victimGender],
+                        user.mturkID + ':' + post.postID + ':' + comment.commentID + ':harassment'
+                    );
+                    comment.likes = 1;
+                    comment.unlikes = 1;
+                }
+
+                if (!Array.isArray(comment.subcomments)) {
+                    continue;
+                }
+
+                for (const subcomment of comment.subcomments) {
+                    const subClass = String(subcomment.class || '');
+                    const subBody = String(subcomment.body || '');
+                    if (subcomment.actor && (subcomment.actor.username === 'Manipulated' || subClass.indexOf('objection') === 0)) {
+                        replaceActorIdentity(subcomment.actor, counterspeakerIdentity);
+                    }
+                    if (subBody.indexOf('Manipulated Objection Message') === 0 || subClass.indexOf('objection') === 0) {
+                        subcomment.body = seededPick(
+                            COUNTERSPEECH_COMMENTS,
+                            user.mturkID + ':' + post.postID + ':' + subcomment.commentID + ':objection'
+                        );
+                    }
+                }
+            }
+        }
+        console.log('[identity-manipulation] condition=' + parsedIdentityCondition.normalized +
+            ' victim=' + victimIdentity.username + ' counterspeaker=' + counterspeakerIdentity.username);
     }
 
     // Final array of all posts to go in the feed
@@ -359,6 +562,10 @@ function actorPeopleProfileImgSrc(picture) {
 }
 
 exports.actorPeopleProfileImgSrc = actorPeopleProfileImgSrc;
+exports.parseIdentityCondition = parseIdentityCondition;
+exports.normalizeExperimentalCondition = normalizeExperimentalCondition;
+exports.isLegacyCondition = isLegacyCondition;
+exports.defaultIdentityCondition = DEFAULT_IDENTITY_CONDITION;
 
 const SIGNUP_USERNAME_REGEX = /^[a-z0-9_]{3,24}$/;
 

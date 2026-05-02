@@ -6,6 +6,34 @@ async function getUserInformation() {
 
 getUserInformation();
 
+function getInitialsFromProfilePicture(picture) {
+    if (!picture || typeof picture !== 'string') {
+        return '';
+    }
+    const match = picture.trim().match(/Initials\s*\(([^)]+)\)/i);
+    if (!match || !match[1]) {
+        return '';
+    }
+    const initials = match[1].trim().toUpperCase();
+    return /^[A-Z]{2}$/.test(initials) ? initials : '';
+}
+
+function getUserAvatarMarkup() {
+    const initials = getInitialsFromProfilePicture(script.userProfile.picture);
+    if (initials) {
+        return `<a class="avatar actor-initials-badge"><span>${initials}</span></a>`;
+    }
+    return `<a class="avatar"><img src="${script.userProfile.picture}"></a>`;
+}
+
+function getUserInlineAvatarMarkup() {
+    const initials = getInitialsFromProfilePicture(script.userProfile.picture);
+    if (initials) {
+        return `<a class="avatar actor-initials-badge"><span>${initials}</span></a>`;
+    }
+    return `<img class="ui image rounded" src="${script.userProfile.picture}">`;
+}
+
 function likePost(e) {
     const target = $(e.target).closest('.ui.like.button');
     const post = target.closest(".ui.fluid.card");
@@ -309,7 +337,7 @@ function addCommentToVideo(e) {
         const mess = `
         <div class="comment" commentID=${commentID} index=${commentID}>
             <div class="image" style="background-color:${script.userProfile.color}">
-                <a class="avatar"><img src="${script.userProfile.picture}"></a>
+                ${getUserAvatarMarkup()}
             </div>
             <div class="content"> 
                 <a class="author /me">${script.userProfile.name} (me)</a>
@@ -363,7 +391,6 @@ function changeColor(e, string = "") {
 }
 
 function openCommentReply(e) {
-    const photo = script.userProfile.picture;
     const color = script.userProfile.color;
     const target = $(e.target).parents('.content');
     const reply_to = target.children('a.author').text().replace(" (me)", "");
@@ -377,7 +404,7 @@ function openCommentReply(e) {
             `<div class="ui form">
                 <div class="inline field">
                     <div class="image" style="background-color:${color}">
-                        <img class="ui image rounded" src=${photo}>
+                        ${getUserInlineAvatarMarkup()}
                     </div>
                     <textarea class="replyToComment" type="text" placeholder="Add a Reply..." rows="1" onInput="changeColor(event${", '@"+reply_to +"'"})">${"@"+reply_to+" "}</textarea>
                 </div>
@@ -450,7 +477,7 @@ function addCommentToComment(e) {
         const mess =
             `<div class="comment" commentID=${commentID}>
             <div class="image" style="background-color:${script.userProfile.color}">
-                <a class="avatar"><img src="${script.userProfile.picture}"></a>
+                ${getUserAvatarMarkup()}
             </div>
             <div class="content"> 
                 <a class="author /me">${script.userProfile.name} (me)</a>

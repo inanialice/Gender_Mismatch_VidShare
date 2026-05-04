@@ -234,6 +234,10 @@ exports.postSignup = async(req, res, next) => {
         const existingUser = await User.findOne({ mturkID: req.query.r_id }).exec();
         let user;
         if (existingUser) {
+            // Same r_id reuses this document; clear prior feed interactions so a fresh signup
+            // does not show comments and actions from an earlier session.
+            existingUser.feedAction = [];
+            existingUser.numComments = -1;
             existingUser.username = username;
             existingUser.profile.picture = profilePictureValue;
             existingUser.profile.name = username;

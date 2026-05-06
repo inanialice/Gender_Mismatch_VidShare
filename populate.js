@@ -11,6 +11,7 @@ const _ = require('lodash');
 const dotenv = require('dotenv');
 var mongoose = require('mongoose');
 const CSVToJSON = require("csvtojson");
+const replyTimeOffsetMs = require('./lib/replyTimeOffsetMs');
 
 //Input Files
 const actor_inputFile = './input/actors.csv';
@@ -197,7 +198,7 @@ async function doPopulate() {
                                     likes: new_reply.likes || getLikesComment(),
                                     unlikes: new_reply.dislikes || getUnlikesComment(),
                                     actor: act,
-                                    time: new_reply.time ? timeStringToNum(new_reply.time) : null,
+                                    time: new_reply.time ? replyTimeOffsetMs(new_reply.time) : null,
                                     class: replyClass,
 
                                     subcomments: []
@@ -251,9 +252,6 @@ String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1);
 }
 
-//Transforms a time like -12:32 (minus 12 hours and 32 minutes) into a time in milliseconds
-//Positive numbers indicate future posts (after they joined), Negative numbers indicate past posts (before they joined)
-//Format: (+/-)HH:MM
 /**
  * replies.csv references many usernames that are not listed in actors.csv. Populate used to skip
  * those rows (and never call async callback), so comments never attached. Map missing names to a
@@ -284,18 +282,6 @@ async function resolveReplyActor(username) {
     console.log(color_start, 'Reply username "' + username + '" not in actors DB; using fallback "' + fallback + '"');
     return Actor.findOne({ username: fallback }).exec();
 }
-
-function timeStringToNum(v) {
-    var timeParts = v.split(":");
-    if (timeParts[0] == "-0")
-    // -0:XX
-        return -1 * parseInt(((timeParts[0] * (60000 * 60)) + (timeParts[1] * 60000)), 10);
-    else if (timeParts[0].startsWith('-'))
-    //-X:XX
-        return parseInt(((timeParts[0] * (60000 * 60)) + (-1 * (timeParts[1] * 60000))), 10);
-    else
-        return parseInt(((timeParts[0] * (60000 * 60)) + (timeParts[1] * 60000)), 10);
-};
 
 //Create a random number (for the number of likes) with a weighted distrubution
 //This is for posts

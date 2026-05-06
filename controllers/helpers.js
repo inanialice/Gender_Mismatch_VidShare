@@ -2,6 +2,7 @@ const _ = require('lodash');
 const Script = require('../models/Script.js');
 const Actor = require('../models/Actor');
 const User = require('../models/User');
+const replyTimeOffsetMs = require('../lib/replyTimeOffsetMs');
 
 const LEGACY_CONDITIONS = ['None', 'None-True', 'Few:None', 'Few:Few', 'Few:Many', 'Many:None', 'Many:Few', 'Many:Many'];
 const DEFAULT_IDENTITY_CONDITION = 'female:unknown';
@@ -562,6 +563,24 @@ function actorPeopleProfileImgSrc(picture) {
 }
 
 exports.actorPeopleProfileImgSrc = actorPeopleProfileImgSrc;
+
+/**
+ * Unix ms for when a comment was "posted" in the simulation.
+ * Scripted comments (CSV `time`): offset from the present moment (e.g. -0:29:00 → ~29 minutes ago).
+ * Participant-authored comments: absolute time via signup + stored relative offset.
+ */
+function commentWallClockMs(user, comment) {
+    var offset = replyTimeOffsetMs(comment && comment.time);
+    if (comment && comment.new_comment) {
+        if (!user || !user.createdAt) {
+            return Date.now();
+        }
+        return user.createdAt.getTime() + offset;
+    }
+    return Date.now() + offset;
+}
+
+exports.commentWallClockMs = commentWallClockMs;
 exports.parseIdentityCondition = parseIdentityCondition;
 exports.normalizeExperimentalCondition = normalizeExperimentalCondition;
 exports.isLegacyCondition = isLegacyCondition;

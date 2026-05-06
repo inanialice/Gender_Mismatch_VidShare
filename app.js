@@ -43,6 +43,7 @@ const app = express();
 app.locals.actorPictureIsInitials = viewHelpers.actorPictureIsInitials;
 app.locals.actorInitialsFromPicture = viewHelpers.actorInitialsFromPicture;
 app.locals.actorPeopleProfileImgSrc = viewHelpers.actorPeopleProfileImgSrc;
+app.locals.commentWallClockMs = viewHelpers.commentWallClockMs;
 
 /**
  * Connect to MongoDB.

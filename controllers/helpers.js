@@ -585,6 +585,9 @@ exports.parseIdentityCondition = parseIdentityCondition;
 exports.normalizeExperimentalCondition = normalizeExperimentalCondition;
 exports.isLegacyCondition = isLegacyCondition;
 exports.defaultIdentityCondition = DEFAULT_IDENTITY_CONDITION;
+exports.HARASSMENT_COMMENTS = HARASSMENT_COMMENTS;
+exports.COUNTERSPEECH_COMMENTS = COUNTERSPEECH_COMMENTS;
+exports.seededPick = seededPick;
 
 const SIGNUP_USERNAME_REGEX = /^[a-z0-9_]{3,24}$/;
 

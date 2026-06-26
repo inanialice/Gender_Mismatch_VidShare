@@ -3,6 +3,7 @@ dotenv.config({ path: '.env' });
 
 const Script = require('./models/Script.js');
 const User = require('./models/User.js');
+const helpers = require('./controllers/helpers');
 const mongoose = require('mongoose');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
@@ -10,6 +11,30 @@ const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const color_start = '\x1b[33m%s\x1b[0m'; // yellow
 const color_success = '\x1b[32m%s\x1b[0m'; // green
 const color_error = '\x1b[31m%s\x1b[0m'; // red
+
+const placeholderCache = {};
+async function getIdentityPlaceholders(interest) {
+    if (placeholderCache[interest]) return placeholderCache[interest];
+    const scripts = await Script.find({ class: interest }).exec();
+    const harassmentPlaceholders = [];
+    const counterspeechPlaceholders = [];
+    for (const script of scripts) {
+        for (const comment of (script.comments || [])) {
+            if (String(comment.body || '').indexOf('Manipulated Harassment Message') === 0) {
+                harassmentPlaceholders.push({ postID: script.postID, commentID: comment.commentID });
+            }
+            for (const sub of (comment.subcomments || [])) {
+                if (String(sub.body || '').indexOf('Manipulated Objection Message') === 0 ||
+                    String(sub.class || '').indexOf('objection') === 0) {
+                    counterspeechPlaceholders.push({ postID: script.postID, commentID: sub.commentID });
+                }
+
+            }
+        }
+    }
+    placeholderCache[interest] = { harassmentPlaceholders, counterspeechPlaceholders };
+    return placeholderCache[interest];
+}
 
 // establish initial Mongoose connection, if Research Site
 mongoose.connect(process.env.MONGOLAB_URI, { useNewUrlParser: true });
@@ -107,6 +132,8 @@ async function getDataExport() {
         { id: 'Off7_Reply', title: 'Off7_Reply' },
         { id: 'Off7_ReplyBody', title: 'Off7_ReplyBody' },
         { id: 'V9_CommentBody', title: 'V9_CommentBody' },
+        { id: 'HarassmentMessage', title: 'HarassmentMessage_Shown' },
+        { id: 'CounterspeechMessage', title: 'CounterspeechMessage_Shown' },
     ];
     const csvWriter = createCsvWriter({
         path: outputFilepath,
@@ -155,6 +182,17 @@ async function getDataExport() {
         record.username = user.username;
         record.Topic = user.interest;
         record.Condition = user.group;
+
+        const parsedIdentity = helpers.parseIdentityCondition(user.group);
+        if (parsedIdentity) {
+            const { harassmentPlaceholders, counterspeechPlaceholders } = await getIdentityPlaceholders(user.interest);
+            record.HarassmentMessage = harassmentPlaceholders.map(p =>
+                helpers.seededPick(helpers.HARASSMENT_COMMENTS[parsedIdentity.victimGender], user.mturkID + ':' + p.postID + ':' + p.commentID + ':harassment')
+            ).join(' | ');
+            record.CounterspeechMessage = counterspeechPlaceholders.map(p =>
+                helpers.seededPick(helpers.COUNTERSPEECH_COMMENTS, user.mturkID + ':' + p.postID + ':' + p.commentID + ':objection')
+            ).join(' | ');
+        }
 
         // Extract pages visited on the website
         let NumVideosVisited_Tutorial = 0;

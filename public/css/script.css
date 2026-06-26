@@ -274,8 +274,8 @@ video {
 }
 
 .ui.form>.inline.field>.image {
-    min-width: 44px;
-    height: 44px;
+    min-width: 40px;
+    height: 40px;
     background-color: #a6a488;
     border-radius: 50% !important;
     display: flex;

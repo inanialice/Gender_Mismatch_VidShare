@@ -22,4 +22,4 @@ exports.isAuthenticated = (req, res, next) => {
         return next();
     }
     res.redirect('/signup');
-};
+};=

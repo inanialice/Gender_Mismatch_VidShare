@@ -91,6 +91,33 @@ exports.logout = async(req, res) => {
 };
 
 /**
+ * GET /embed/firstVideo
+ * Read-only render of the first video + its comments for a participant,
+ * looked up by mturkID (r_id). Meant to be embedded via iframe in the
+ * post-study Qualtrics survey, since the feed itself is no longer
+ * reachable once the participant has logged out.
+ * */
+exports.getFirstVideoEmbed = async(req, res, next) => {
+    try {
+        const r_id = req.query.r_id;
+        let firstPost = null;
+        let participant = null;
+
+        if (r_id) {
+            participant = await User.findOne({ mturkID: r_id }).exec();
+            if (participant) {
+                const finalfeed = await helpers.getFeed(participant);
+                firstPost = finalfeed.length ? finalfeed[0] : null;
+            }
+        }
+
+        res.render('firstVideoEmbed', { firstPost, participant });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
  * GET /signup
  * Signup page.
  */
@@ -115,76 +142,14 @@ exports.postSignup = async(req, res, next) => {
     }
 
     let experimentalCondition = helpers.normalizeExperimentalCondition(req.query.c_id);
-    // ---- Conditions: 8 possible conditions: 6 experimentals & 2 controls ------//
-    // "None": No Harassment Comments
-    // "None-True": No Harassment Comments, including in behavioral data collection
+    // ---- Conditions: identity manipulation, victimGender:counterspeakerGender ------//
+    // victim: male, female
+    // counterspeaker: male, female, unknown
 
-    // "Few:None": 3 online harassments: none addressed
-    // "Few:Few" 3 online harassments: 1 addressed
-    // "Few:Many" 3 online harassments: 2 addressed
-
-    // "Many:None": 6 online harassments: none addressed
-    // "Many:Few": 6 online harassments: 2 addressed
-    // "Many:Many": 6 online harassments: 4 addressed
-
-    let harassmentOrder = [];
-    let harassmentToObjectToOrder = [];
-    let objectionOrder = [];
-
-    const conditions = experimentalCondition.split(":");
-    const useLegacyHarassmentLogic = helpers.isLegacyCondition(experimentalCondition);
-
-    let harassmentComments;
-    if (useLegacyHarassmentLogic) {
-        switch (conditions[0]) {
-            case "None":
-            case "None-True":
-                harassmentOrder = [];
-                break;
-            case "Few":
-                // 3 online harassments
-                harassmentOrder = [];
-                harassmentOrder.push(shuffle([0, 3])[0]);
-                harassmentOrder.push(shuffle([1, 4])[0]);
-                harassmentOrder.push(shuffle([2, 5])[0]);
-                break;
-            case "Many":
-                harassmentComments = [0, 1, 2, 3, 4, 5]; // 6 online harassments
-                harassmentOrder = shuffle(harassmentComments);
-            default:
-                break;
-        }
-
-        let objectionComments = shuffle([0, 1, 2, 3]);
-        switch (conditions[1]) {
-            case undefined:
-            case "None":
-                harassmentToObjectToOrder = [];
-                objectionOrder = [];
-                break;
-            case "Few":
-                indexes = conditions[0] == "Few" ? [0, 1, 2] : [0, 1, 2, 3, 4, 5];
-                indexes = shuffle(indexes);
-                harassmentToObjectToOrder = conditions[0] == "Few" ? indexes.slice(0, 1) : indexes.slice(0, 2);
-
-                objectionOrder = conditions[0] == "Few" ? objectionComments.slice(0, 1) : objectionComments.slice(0, 2);
-                break;
-            case "Many":
-                indexes = conditions[0] == "Few" ? [0, 1, 2] : [0, 1, 2, 3, 4, 5];
-                indexes = shuffle(indexes);
-                harassmentToObjectToOrder = conditions[0] == "Few" ? indexes.slice(0, 2) : indexes.slice(0, 4);
-
-                objectionOrder = conditions[0] == "Few" ? objectionComments.slice(0, 2) : objectionComments.slice(0, 4);
-                break;
-            default:
-                break;
-        }
-    } else {
-        // Identity manipulation conditions do not use legacy frequency scheduling.
-        harassmentOrder = [];
-        harassmentToObjectToOrder = [];
-        objectionOrder = [];
-    }
+    // Identity conditions keep CSV-authored harassment/objection comments as-is.
+    const harassmentOrder = [];
+    const harassmentToObjectToOrder = [];
+    const objectionOrder = [];
 
     const numComments = [3, 3, 5, 3, 5, 3];
     let commentTimes = [];

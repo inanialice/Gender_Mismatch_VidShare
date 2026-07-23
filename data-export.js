@@ -271,7 +271,7 @@ async function getDataExport() {
                 if (feedAction.flagged) {
                     VideoFlagNumber++;
                 }
-                const generalComments = user.group != "None-True" && offenseId ?
+                const generalComments = offenseId ?
                     feedAction.comments.filter(comment =>
                         !comment.new_comment &&
                         comment.comment.toString() != offenseId) :
@@ -281,7 +281,7 @@ async function getDataExport() {
                 const numLikes = generalComments.filter(comment => comment.liked).length;
                 const numDislikes = generalComments.filter(comment => comment.unliked).length;
                 const numFlagged = generalComments.filter(comment => comment.flagged).length;
-                const newComments = user.group != "None-True" && offenseId ?
+                const newComments = offenseId ?
                     feedAction.comments.filter(comment =>
                         comment.new_comment &&
                         String(comment.reply_to || '') != String(offenseId)) :
@@ -299,7 +299,7 @@ async function getDataExport() {
                 record[`V${video}_CommentFlagNumber`] = numFlagged;
                 record[`V${video}_PostComments`] = numNewComments;
 
-                if (video == 9 && user.group != "None-True" && offenseId) {
+                if (video == 9 && offenseId) {
                     // Offense 
                     const offObj = feedAction.comments.find(comment => !comment.new_comment && comment.comment.toString() == offenseId);
                     record.Off7_Upvote = (offObj != undefined) ? offObj.liked : false;

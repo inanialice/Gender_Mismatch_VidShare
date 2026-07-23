@@ -1,0 +1,100 @@
+doctype html
+html
+  head
+    meta(charset='utf-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    title First video comments
+    link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.1/semantic.min.css')
+    link(type='text/css', rel='stylesheet', href='/public/css/script.css')
+    style.
+      body { margin: 0; padding: 1em; background: #fff; }
+  body
+    if firstPost
+      .ui.fluid.card
+        .content.title
+          h2 !{firstPost.body}
+        .content
+          .ui.two.column.grid.stackable
+            .five.wide.column.centered
+              video(controls controlsList="nofullscreen" width="100%")
+                source(src='/post_pictures/'+firstPost.picture type='video/mp4')
+              .video-meta
+                .video-meta-profile(style='display:flex;align-items:center;gap:0.6em;')
+                  if actorPictureIsInitials(firstPost.actor.profile.picture)
+                    .video-meta-avatar.video-meta-initials(role='img', aria-label='Profile', style='background-color:' + (firstPost.actor.profile.color || '#d7ddd9') + ';width:2.5em;height:2.5em;max-width:2.5em;max-height:2.5em;min-width:0;flex:0 0 2.5em;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;box-sizing:border-box;')
+                      span.video-meta-initials-text= actorInitialsFromPicture(firstPost.actor.profile.picture)
+                  else
+                    .video-meta-avatar.video-meta-photo-shell(style='background-color:' + (firstPost.actor.profile.color || '#d7ddd9') + ';width:2.5em;height:2.5em;max-width:2.5em;max-height:2.5em;min-width:0;flex:0 0 2.5em;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;box-sizing:border-box;')
+                      a.avatar
+                        img(src=actorPeopleProfileImgSrc(firstPost.actor.profile.picture), alt='profile picture')
+                  .video-meta-user
+                    .video-meta-username !{firstPost.actor.username}
+            .eleven.wide.column.centered
+              h3 Comments
+              .ui.divider(style="margin:0px;")
+              .ui.comments
+                each comment in firstPost.comments
+                  .comment
+                    if comment.new_comment
+                      .image(style="background-color:"+participant.profile.color+";")
+                        if actorPictureIsInitials(participant.profile.picture)
+                          a.avatar.actor-initials-badge
+                            span= actorInitialsFromPicture(participant.profile.picture)
+                        else
+                          a.avatar
+                            img(src=participant.profile.picture)
+                    else
+                      .image(style="background-color:"+comment.actor.profile.color+";")
+                        if actorPictureIsInitials(comment.actor.profile.picture)
+                          a.avatar.actor-initials-badge
+                            span= actorInitialsFromPicture(comment.actor.profile.picture)
+                        else
+                          a.avatar
+                            img(src=actorPeopleProfileImgSrc(comment.actor.profile.picture))
+                    .content
+                      if comment.new_comment
+                        a.author !{participant.username} (me)
+                      else
+                        a.author !{comment.actor.username}
+                      .metadata
+                        span.date !{commentWallClockMs(participant, comment)}
+                      .text !{comment.body}
+                      if comment.subcomments && comment.subcomments.length
+                        .comments
+                          each subcomment in comment.subcomments
+                            .comment
+                              if subcomment.new_comment
+                                .image(style="background-color:"+participant.profile.color+";")
+                                  if actorPictureIsInitials(participant.profile.picture)
+                                    a.avatar.actor-initials-badge
+                                      span= actorInitialsFromPicture(participant.profile.picture)
+                                  else
+                                    a.avatar
+                                      img(src=participant.profile.picture)
+                              else
+                                .image(style="background-color:"+subcomment.actor.profile.color+";")
+                                  if actorPictureIsInitials(subcomment.actor.profile.picture)
+                                    a.avatar.actor-initials-badge
+                                      span= actorInitialsFromPicture(subcomment.actor.profile.picture)
+                                  else
+                                    a.avatar
+                                      img(src=actorPeopleProfileImgSrc(subcomment.actor.profile.picture))
+                              .content
+                                if subcomment.new_comment
+                                  a.author !{participant.username} (me)
+                                else
+                                  a.author !{subcomment.actor.username}
+                                .metadata
+                                  span.date !{commentWallClockMs(participant, subcomment)}
+                                .text !{subcomment.body}
+    else
+      p(style="text-align:center; color:gray;") We couldn't find the comments for your first video.
+    script(src='https://code.jquery.com/jquery-3.7.1.js')
+    script(src='/public/js/lib/humanized_time_span.js')
+    script.
+      $(window).on('load', function() {
+        $('span.date').each(function() {
+          const ms = parseInt($(this).text(), 10);
+          $(this).text(humanized_time_span(new Date(ms)));
+        });
+      });

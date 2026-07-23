@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema({
 
     mturkID: { type: String, unique: true },
 
-    group: String, // [frequency of harassing comments]:[frequency of addressed harassment comments]
+    group: String, // identity condition: [victim gender]:[counterspeaker gender], e.g. "female:unknown"
 
     harassmentOrder: [Number], // Values correspond to which harassment comment. Order of list indicates the order in which they appear.
     harassmentToObjectToOrder: [Number], // Values correspond to which harassment comment objection belongs to.

@@ -4,7 +4,6 @@ const Actor = require('../models/Actor');
 const User = require('../models/User');
 const replyTimeOffsetMs = require('../lib/replyTimeOffsetMs');
 
-const LEGACY_CONDITIONS = ['None', 'None-True', 'Few:None', 'Few:Few', 'Few:Many', 'Many:None', 'Many:Few', 'Many:Many'];
 const DEFAULT_IDENTITY_CONDITION = 'female:unknown';
 
 const IDENTITY_MAPPINGS = {
@@ -15,8 +14,8 @@ const IDENTITY_MAPPINGS = {
     counterspeaker: {
         male: { username: 'Mike7_Frosty', picture: 'counterspeaker_male.svg' },
         female: { username: 'Ashley7_Neon', picture: 'counterspeaker_female.svg' },
-        // No dedicated unknown file exists in people_profiles, so use a neutral default asset.
-        unknown: { username: 'Koala7_Wild', picture: '01_woman_light_gray.svg' }
+        // No dedicated unknown avatar image should be shown; render as initials on a blank background instead.
+        unknown: { username: 'Koala7_Wild', picture: 'Initials (KW)' }
     }
 };
 
@@ -108,17 +107,10 @@ function parseIdentityCondition(condition) {
     };
 }
 
-function isLegacyCondition(condition) {
-    return LEGACY_CONDITIONS.indexOf(String(condition || '').trim()) >= 0;
-}
-
 function normalizeExperimentalCondition(condition) {
     const parsedIdentity = parseIdentityCondition(condition);
     if (parsedIdentity) {
         return parsedIdentity.normalized;
-    }
-    if (isLegacyCondition(condition)) {
-        return String(condition).trim();
     }
     return DEFAULT_IDENTITY_CONDITION;
 }
@@ -175,19 +167,6 @@ exports.getFeed = async function(user) {
         .populate('comments.actor')
         .populate('comments.subcomments.actor')
         .exec();
-
-    // Legacy override for old frequency-based conditions only.
-    // For identity conditions (male/female/unknown), keep CSV-authored comments.
-    if (isLegacyCondition(user.group) && user.group != "None-True") {
-        var offensePost = script_feed[2];
-        var offenseComment = offensePost && Array.isArray(offensePost.comments) ? offensePost.comments[0] : null;
-        if (offenseComment) {
-            offenseComment.body = "Another pointless video. Ever consider that no one cares?";
-            offenseComment.likes = 1;
-            offenseComment.unlikes = 1;
-            offenseComment.class = 'offense7';
-        }
-    }
 
     const parsedIdentityCondition = parseIdentityCondition(user.group);
     if (parsedIdentityCondition) {
@@ -583,7 +562,6 @@ function commentWallClockMs(user, comment) {
 exports.commentWallClockMs = commentWallClockMs;
 exports.parseIdentityCondition = parseIdentityCondition;
 exports.normalizeExperimentalCondition = normalizeExperimentalCondition;
-exports.isLegacyCondition = isLegacyCondition;
 exports.defaultIdentityCondition = DEFAULT_IDENTITY_CONDITION;
 exports.HARASSMENT_COMMENTS = HARASSMENT_COMMENTS;
 exports.COUNTERSPEECH_COMMENTS = COUNTERSPEECH_COMMENTS;

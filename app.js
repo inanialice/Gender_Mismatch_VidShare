@@ -147,9 +147,10 @@ app.get('/thankyou', function(req, res) {
         r_id: req.query.r_id
     })
 });
+app.get('/embed/firstVideo', userController.getFirstVideoEmbed);
 
 app.get('/actors', actorsController.getActors);
-app.get('/userProfile', userController.getUserProfile);
+app.get('/userProfile', passportConfig.isAuthenticated, userController.getUserProfile);
 
 /**
  * Error Handler.

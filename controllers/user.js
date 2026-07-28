@@ -70,6 +70,8 @@ exports.logout = async(req, res) => {
 
         const user = await User.findById(req.user.id).exec();
         const r_id = user && user.mturkID ? user.mturkID : '';
+        const condition = user && user.group ? user.group : '';
+        const interest = user && user.interest ? user.interest : '';
         if (user) {
             user.logPage(Date.now(), '/thankyou');
         }
@@ -79,7 +81,8 @@ exports.logout = async(req, res) => {
                 if (err) console.log('Error : Failed to destroy the session during logout.', err);
                 req.user = null;
                 if (r_id) {
-                    return res.redirect(`/thankyou?r_id=${r_id}`);
+                    const query = `r_id=${encodeURIComponent(r_id)}&condition=${encodeURIComponent(condition)}&interest=${encodeURIComponent(interest)}`;
+                    return res.redirect(`/thankyou?${query}`);
                 }
                 return res.redirect('/signup');
             });

@@ -29,6 +29,13 @@ html
                         img(src=actorPeopleProfileImgSrc(firstPost.actor.profile.picture), alt='profile picture')
                   .video-meta-user
                     .video-meta-username !{firstPost.actor.username}
+                .video-meta-votes(style='margin-top:0.5em;display:flex;gap:1em;color:#767676;font-size:0.95em;')
+                  span
+                    i.thumbs.up.icon
+                    | !{firstPost.likes || 0}
+                  span
+                    i.thumbs.down.icon
+                    | !{firstPost.unlikes || 0}
             .eleven.wide.column.centered
               h3 Comments
               .ui.divider(style="margin:0px;")
@@ -59,6 +66,13 @@ html
                       .metadata
                         span.date !{commentWallClockMs(participant, comment)}
                       .text !{comment.body}
+                      .actions
+                        span.like(class=comment.liked ? "green" : null)
+                          i.icon.thumbs.up(class=comment.liked ? "green" : null)
+                          span.num !{comment.likes}
+                        span.unlike(class=comment.unliked ? "red" : null)
+                          i.icon.thumbs.down(class=comment.unliked ? "red" : null)
+                          span.num !{comment.unlikes}
                       if comment.subcomments && comment.subcomments.length
                         .comments
                           each subcomment in comment.subcomments
@@ -87,6 +101,13 @@ html
                                 .metadata
                                   span.date !{commentWallClockMs(participant, subcomment)}
                                 .text !{subcomment.body}
+                                .actions
+                                  span.like(class=subcomment.liked ? "green" : null)
+                                    i.icon.thumbs.up(class=subcomment.liked ? "green" : null)
+                                    span.num !{subcomment.likes}
+                                  span.unlike(class=subcomment.unliked ? "red" : null)
+                                    i.icon.thumbs.down(class=subcomment.unliked ? "red" : null)
+                                    span.num !{subcomment.unlikes}
     else
       p(style="text-align:center; color:gray;") We couldn't find the comments for your first video.
     script(src='https://code.jquery.com/jquery-3.7.1.js')

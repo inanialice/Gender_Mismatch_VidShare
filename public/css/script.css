@@ -83,11 +83,11 @@ video {
 
 .ui.fluid.card .content .video-meta-profile .video-meta-avatar.video-meta-photo-shell,
 .ui.fluid.card .content .video-meta-profile .video-meta-avatar.video-meta-initials {
-    flex: 0 0 2.5em !important;
-    width: 2.5em !important;
-    height: 2.5em !important;
-    max-width: 2.5em !important;
-    max-height: 2.5em !important;
+    flex: 0 0 3.125em !important;
+    width: 3.125em !important;
+    height: 3.125em !important;
+    max-width: 3.125em !important;
+    max-height: 3.125em !important;
     min-width: 0 !important;
     border-radius: 50% !important;
     box-sizing: border-box !important;

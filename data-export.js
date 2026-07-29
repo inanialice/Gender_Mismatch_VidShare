@@ -60,7 +60,11 @@ async function getUserJsons() {
 }
 
 /*
-  Gets the mongoDB object id value of the offense message.
+  Gets the mongoDB object id AND the CSV numeric commentID of the offense message.
+  Both are needed: likes/unlikes/flags on a comment are recorded against its Mongo
+  `.id`, but replies are recorded against the CSV numeric `commentID` instead
+  (see public/js/postFunctionalities.js's reply handler, which reads the DOM's
+  `index` attribute for replies rather than its `commentID` attribute).
 */
 async function getOffenseId(interest) {
     const videoObjs = await Script
@@ -69,19 +73,24 @@ async function getOffenseId(interest) {
         .limit(1)
         .exec();
     if (!videoObjs.length || !Array.isArray(videoObjs[0].comments)) {
-        return null;
+        return { postID: null, id: null, commentID: null };
     }
     const offenseObj = videoObjs[0].comments.find(comment =>
         String(comment.class || '').indexOf('offense') === 0 ||
         String(comment.body || '').indexOf('Manipulated Harassment Message') === 0
     );
-    return offenseObj ? offenseObj.id : null;
+    return {
+        postID: videoObjs[0].postID,
+        id: offenseObj ? offenseObj.id : null,
+        commentID: offenseObj ? offenseObj.commentID : null
+    };
 }
 
 /*
-  Gets the mongoDB object ids of the harassment ("Manipulated Harassment Message")
-  and objection ("Manipulated Objection Message") comments, which live on the
-  FIRST video for the interest (unlike the offense message above, which is on the last).
+  Gets the mongoDB object ids AND CSV numeric commentIDs of the harassment
+  ("Manipulated Harassment Message") and objection ("Manipulated Objection
+  Message") comments, which live on the FIRST video for the interest (unlike
+  the offense message above, which is on the last).
 */
 async function getFirstVideoStimulusIds(interest) {
     const videoObjs = await Script
@@ -90,24 +99,28 @@ async function getFirstVideoStimulusIds(interest) {
         .limit(1)
         .exec();
     if (!videoObjs.length || !Array.isArray(videoObjs[0].comments)) {
-        return { postID: null, harassmentId: null, objectionId: null };
+        return { postID: null, harassmentId: null, harassmentCommentID: null, objectionId: null, objectionCommentID: null };
     }
     const harassmentObj = videoObjs[0].comments.find(comment =>
         String(comment.class || '').indexOf('offense') === 0 ||
         String(comment.body || '').indexOf('Manipulated Harassment Message') === 0
     );
     let objectionId = null;
+    let objectionCommentID = null;
     if (harassmentObj && Array.isArray(harassmentObj.subcomments)) {
         const objectionObj = harassmentObj.subcomments.find(sub =>
             String(sub.class || '').indexOf('objection') === 0 ||
             String(sub.body || '').indexOf('Manipulated Objection Message') === 0
         );
         objectionId = objectionObj ? objectionObj.id : null;
+        objectionCommentID = objectionObj ? objectionObj.commentID : null;
     }
     return {
         postID: videoObjs[0].postID,
         harassmentId: harassmentObj ? harassmentObj.id : null,
-        objectionId
+        harassmentCommentID: harassmentObj ? harassmentObj.commentID : null,
+        objectionId,
+        objectionCommentID
     };
 }
 
@@ -239,8 +252,13 @@ async function getDataExport() {
             ).join(' | ');
         }
 
-        const offenseId = await getOffenseId(user.interest);
-        const { postID: harassPostID, harassmentId, objectionId } = await getFirstVideoStimulusIds(user.interest);
+        const { postID: offensePostID, id: offenseId, commentID: offenseCommentID } = await getOffenseId(user.interest);
+        const {
+            postID: harassPostID,
+            harassmentId, harassmentCommentID,
+            objectionId, objectionCommentID
+        } = await getFirstVideoStimulusIds(user.interest);
+        const offenseVideo = offensePostID != null ? (offensePostID % 9) + 1 : null;
         const harassVideo = harassPostID != null ? (harassPostID % 9) + 1 : null;
 
         // Extract pages visited on the website
@@ -261,7 +279,7 @@ async function getDataExport() {
                     } else {
                         NumVideosVisited_Behavioral++;
                     }
-                    if (page == 9) {
+                    if (offenseVideo != null && page == offenseVideo) {
                         Off7_Appear = true;
                         record.Off7_Upvote = false;
                         record.Off7_Downvote = false;
@@ -317,7 +335,11 @@ async function getDataExport() {
 
         // Stimuli comments (offense/harassment/objection) are tracked in their own
         // dedicated columns below, so they're excluded from the general counts here.
-        const stimulusIds = [offenseId, harassmentId, objectionId].filter(Boolean).map(String);
+        // Likes/unlikes/flags reference a comment by its Mongo `.id`; replies
+        // reference the comment being replied to by its CSV numeric `commentID`
+        // instead (see getOffenseId/getFirstVideoStimulusIds comment above).
+        const stimulusMongoIds = [offenseId, harassmentId, objectionId].filter(Boolean).map(String);
+        const stimulusCommentIDs = [offenseCommentID, harassmentCommentID, objectionCommentID].filter(id => id != null).map(String);
 
         // For each video (feedAction) belonging to the user's interest:
         for (const feedAction of user.feedAction) {
@@ -337,14 +359,14 @@ async function getDataExport() {
             }
             const generalComments = feedAction.comments.filter(comment =>
                 !comment.new_comment &&
-                stimulusIds.indexOf(String(comment.comment)) === -1);
+                stimulusMongoIds.indexOf(String(comment.comment)) === -1);
 
             const numLikes = generalComments.filter(comment => comment.liked).length;
             const numDislikes = generalComments.filter(comment => comment.unliked).length;
             const numFlagged = generalComments.filter(comment => comment.flagged).length;
             const newComments = feedAction.comments.filter(comment =>
                 comment.new_comment &&
-                stimulusIds.indexOf(String(comment.reply_to || '')) === -1);
+                stimulusCommentIDs.indexOf(String(comment.reply_to || '')) === -1);
             const numNewComments = newComments.length;
 
             CommentUpvoteNumber += numLikes;
@@ -357,14 +379,14 @@ async function getDataExport() {
             record[`V${video}_CommentFlagNumber`] = numFlagged;
             record[`V${video}_PostComments`] = numNewComments;
 
-            if (video == 9 && offenseId) {
+            if (offenseVideo != null && video == offenseVideo && offenseId) {
                 // Offense
                 const offObj = feedAction.comments.find(comment => !comment.new_comment && comment.comment.toString() == offenseId);
                 record.Off7_Upvote = (offObj != undefined) ? offObj.liked : false;
                 record.Off7_Downvote = (offObj != undefined) ? offObj.unliked : false;
                 record.Off7_Flag = (offObj != undefined) ? offObj.flagged : false;
 
-                const replyToOffense = feedAction.comments.filter(comment => String(comment.reply_to || '') == String(offenseId));
+                const replyToOffense = feedAction.comments.filter(comment => String(comment.reply_to || '') == String(offenseCommentID));
                 if (replyToOffense.length != 0) {
                     let string = "";
                     replyToOffense.forEach(comment => { string += comment.new_comment_id + (comment.reply_to ? " (is a reply to " + comment.reply_to + ")" : "") + ": " + comment.body + "\r\n" });
@@ -387,7 +409,7 @@ async function getDataExport() {
                     record.Harassment_Downvote = (harassObj != undefined) ? harassObj.unliked : false;
                     record.Harassment_Flag = (harassObj != undefined) ? harassObj.flagged : false;
 
-                    const replyToHarassment = feedAction.comments.filter(comment => String(comment.reply_to || '') == String(harassmentId));
+                    const replyToHarassment = feedAction.comments.filter(comment => String(comment.reply_to || '') == String(harassmentCommentID));
                     if (replyToHarassment.length != 0) {
                         let string = "";
                         replyToHarassment.forEach(comment => { string += comment.new_comment_id + (comment.reply_to ? " (is a reply to " + comment.reply_to + ")" : "") + ": " + comment.body + "\r\n" });
@@ -404,7 +426,7 @@ async function getDataExport() {
                     record.Objection_Downvote = (objectionObj != undefined) ? objectionObj.unliked : false;
                     record.Objection_Flag = (objectionObj != undefined) ? objectionObj.flagged : false;
 
-                    const replyToObjection = feedAction.comments.filter(comment => String(comment.reply_to || '') == String(objectionId));
+                    const replyToObjection = feedAction.comments.filter(comment => String(comment.reply_to || '') == String(objectionCommentID));
                     if (replyToObjection.length != 0) {
                         let string = "";
                         replyToObjection.forEach(comment => { string += comment.new_comment_id + (comment.reply_to ? " (is a reply to " + comment.reply_to + ")" : "") + ": " + comment.body + "\r\n" });

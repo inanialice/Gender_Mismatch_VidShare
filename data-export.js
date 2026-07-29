@@ -254,7 +254,7 @@ async function getDataExport() {
 
         // For each video (feedAction)
         for (const feedAction of user.feedAction) {
-            if (!feedAction.post.class.startsWith(user.interest)) {
+            if (!feedAction.post || !feedAction.post.class.startsWith(user.interest)) {
                 continue;
             }
             const video = (feedAction.post.postID % 9) + 1; // 1, 2, 3, 4, 5, 6, 7, 8, 9
